@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/items
 router.post('/', async (req, res) => {
-  const { name, amount_needed, priority, is_recurring, due_date } = req.body;
+  const { name, amount_needed, priority, is_recurring, due_date, category } = req.body;
   if (!name || amount_needed == null || !priority) {
     return res.status(400).json({ error: 'name, amount_needed, and priority are required' });
   }
@@ -31,7 +31,7 @@ router.post('/', async (req, res) => {
 
   const { data, error } = await supabase
     .from('items')
-    .insert({ user_id: req.userId, name, amount_needed, priority, is_recurring: is_recurring ?? false, due_date })
+    .insert({ user_id: req.userId, name, amount_needed, priority, is_recurring: is_recurring ?? false, due_date, category: category || 'General' })
     .select()
     .single();
 
@@ -41,10 +41,10 @@ router.post('/', async (req, res) => {
 
 // PUT /api/items/:id
 router.put('/:id', async (req, res) => {
-  const { name, amount_needed, priority, is_recurring, due_date } = req.body;
+  const { name, amount_needed, priority, is_recurring, due_date, category } = req.body;
   const { data, error } = await supabase
     .from('items')
-    .update({ name, amount_needed, priority, is_recurring, due_date })
+    .update({ name, amount_needed, priority, is_recurring, due_date, category: category || 'General' })
     .eq('id', req.params.id)
     .eq('user_id', req.userId)
     .select()
