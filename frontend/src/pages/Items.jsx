@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useItems } from '../hooks/useBudget.js';
 import toast from 'react-hot-toast';
@@ -6,9 +6,9 @@ import toast from 'react-hot-toast';
 const PRIORITIES = ['essential', 'important', 'optional'];
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
-function ItemModal({ initial, onClose, onSave }) {
+function ItemModal({ initial, onClose, onSave, existingCategories }) {
   const [form, setForm] = useState(initial || {
-    name: '', amount_needed: '', priority: 'important', is_recurring: false, due_date: '',
+    name: '', amount_needed: '', priority: 'important', is_recurring: false, due_date: '', category: 'General'
   });
   const [loading, setLoading] = useState(false);
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
@@ -32,20 +32,40 @@ function ItemModal({ initial, onClose, onSave }) {
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2 className="modal-title">{initial ? '✏️ Edit Item' : '➕ Add Item'}</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="form-group">
-            <label className="label">Name</label>
-            <input id="item-name" type="text" className="input" placeholder="e.g. Groceries" required
-              value={form.name} onChange={(e) => set('name', e.target.value)} autoFocus />
+          <div className="form-row">
+            <div className="form-group">
+              <label className="label">Name</label>
+              <input id="item-name" type="text" className="input" placeholder="e.g. Groceries" required
+                value={form.name} onChange={(e) => set('name', e.target.value)} autoFocus />
+            </div>
+            <div className="form-group">
+              <label className="label">Category</label>
+              <input 
+                id="item-category" 
+                type="text" 
+                className="input" 
+                list="category-options"
+                placeholder="e.g. Daily Food, Snacks" 
+                required
+                value={form.category} 
+                onChange={(e) => set('category', e.target.value)} 
+              />
+              <datalist id="category-options">
+                {existingCategories.map(cat => (
+                  <option key={cat} value={cat} />
+                ))}
+              </datalist>
+            </div>
           </div>
 
           <div className="form-row">
             <div className="form-group">
-              <label className="label">Amount Needed (?)</label>
+              <label className="label">Amount Needed (₹)</label>
               <input id="item-amount" type="number" className="input" step="0.01" min="0" placeholder="0.00" required
                 value={form.amount_needed} onChange={(e) => set('amount_needed', e.target.value)} />
             </div>
             <div className="form-group">
-              <label className="label">Priority</label>
+              <label className="label">Priority (Allocator)</label>
               <select id="item-priority" className="select" value={form.priority} onChange={(e) => set('priority', e.target.value)}>
                 {PRIORITIES.map((p) => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
               </select>
@@ -81,26 +101,38 @@ function ItemModal({ initial, onClose, onSave }) {
   );
 }
 
-function PriorityColumn({ title, color, items, onEdit, onDelete }) {
+function CategoryColumn({ title, items, onEdit, onDelete }) {
+  // Simple hash for distinct colors based on string
+  const hashString = (str) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    return hash;
+  };
+  const hue = Math.abs(hashString(title)) % 360;
+  const color = `hsl(${hue}, 70%, 65%)`;
+
   return (
-    <div className="card" style={{ borderColor: `${color}22`, display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', height: 'fit-content' }}>
+    <div className="card" style={{ borderColor: `hsl(${hue}, 70%, 65%, 0.22)`, display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', height: 'fit-content' }}>
       <div className="flex items-center justify-between">
         <div className="section-title" style={{ color }}>{title}</div>
-        <span className="badge" style={{ background: `${color}18`, color }}>{items.length}</span>
+        <span className="badge" style={{ background: `hsl(${hue}, 70%, 65%, 0.1)`, color }}>{items.length}</span>
       </div>
 
       {items.length === 0 ? (
-        <p className="text-xs text-muted">No {title.toLowerCase()} items yet.</p>
+        <p className="text-xs text-muted">No items in {title}.</p>
       ) : (
         items.map((item) => (
           <div key={item.id} className="card card-sm" style={{ background: 'var(--color-bg)', borderColor: 'var(--color-border)' }}>
             <div className="flex items-center justify-between gap-3">
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="font-semibold text-sm" style={{ marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="font-semibold text-sm" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                  <span className={`badge badge-${item.priority}`} style={{ fontSize: '0.6rem', padding: '2px 4px' }}>{item.priority}</span>
+                </div>
                 <div className="text-xs text-muted">{fmt.format(item.amount_needed)}{item.is_recurring ? ' · recurring' : ''}</div>
                 {item.due_date && <div className="text-xs text-muted">Due {new Date(item.due_date).toLocaleDateString()}</div>}
               </div>
-              <div className="flex gap-1">
+              <div className="flex flex-col gap-1">
                 <button id={`item-edit-${item.id}`} className="btn btn-icon btn-ghost btn-sm" onClick={() => onEdit(item)}>
                   <Pencil size={12} />
                 </button>
@@ -121,11 +153,19 @@ export default function Items() {
   const [modal, setModal] = useState(null); // null | 'add' | item object
 
   const items = query.data || [];
-  const groups = {
-    essential: items.filter((i) => i.priority === 'essential'),
-    important: items.filter((i) => i.priority === 'important'),
-    optional:  items.filter((i) => i.priority === 'optional'),
-  };
+  
+  // Group items by category
+  const categoriesMap = useMemo(() => {
+    const map = {};
+    items.forEach(item => {
+      const cat = item.category || 'General';
+      if (!map[cat]) map[cat] = [];
+      map[cat].push(item);
+    });
+    return map;
+  }, [items]);
+  
+  const existingCategories = Object.keys(categoriesMap).sort();
   const totalNeeded = items.reduce((s, i) => s + Number(i.amount_needed), 0);
 
   async function handleDelete(id) {
@@ -158,13 +198,22 @@ export default function Items() {
         </button>
       </div>
 
-      <div className="grid-3">
-        <PriorityColumn title="Essential" color="var(--color-essential)" items={groups.essential}
-          onEdit={(item) => setModal(item)} onDelete={handleDelete} />
-        <PriorityColumn title="Important" color="var(--color-warning)" items={groups.important}
-          onEdit={(item) => setModal(item)} onDelete={handleDelete} />
-        <PriorityColumn title="Optional" color="var(--color-optional)" items={groups.optional}
-          onEdit={(item) => setModal(item)} onDelete={handleDelete} />
+      <div className="grid-auto">
+        {existingCategories.length === 0 ? (
+          <div className="col-span-full text-center text-muted py-8">
+            <p>No items yet. Add an item to get started!</p>
+          </div>
+        ) : (
+          existingCategories.map(cat => (
+            <CategoryColumn 
+              key={cat} 
+              title={cat} 
+              items={categoriesMap[cat]}
+              onEdit={(item) => setModal(item)} 
+              onDelete={handleDelete} 
+            />
+          ))
+        )}
       </div>
 
       {modal && (
@@ -172,6 +221,7 @@ export default function Items() {
           initial={modal === 'add' ? null : modal}
           onClose={() => setModal(null)}
           onSave={handleSave}
+          existingCategories={existingCategories}
         />
       )}
     </div>
