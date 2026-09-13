@@ -112,6 +112,20 @@ router.post('/:id/payments', async (req, res) => {
 
   if (updateErr) throw updateErr;
 
+  // Subtract payment from user_settings current_balance
+  const { data: settings } = await supabase
+    .from('user_settings')
+    .select('id, current_balance')
+    .eq('user_id', req.userId)
+    .single();
+
+  if (settings) {
+    await supabase
+      .from('user_settings')
+      .update({ current_balance: Number(settings.current_balance || 0) - Number(amount) })
+      .eq('id', settings.id);
+  }
+
   res.status(201).json({ payment, debt: updatedDebt });
 });
 

@@ -87,7 +87,10 @@ export function useDebts() {
 
   const logPayment = useMutation({
     mutationFn: ({ id, ...data }) => apiClient.post(`/debts/${id}/payments`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['debts'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+    },
   });
 
   return { query, create, update, remove, logPayment };
@@ -124,7 +127,10 @@ export function useTransactions(month) {
 
   const create = useMutation({
     mutationFn: (data) => apiClient.post('/transactions', data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transactions'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+    },
   });
 
   return { query, create };
