@@ -32,7 +32,7 @@ function MotionModal({ children, onClose }) {
 }
 
 function AddDebtModal({ onClose, onCreate }) {
-  const [form, setForm] = useState({ name: '', principal: '', description: '' });
+  const [form, setForm] = useState({ name: '', principal: '', description: '', priority: 'normal' });
   const [loading, setLoading] = useState(false);
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -40,7 +40,7 @@ function AddDebtModal({ onClose, onCreate }) {
     e.preventDefault();
     setLoading(true);
     try {
-      await onCreate({ name: form.name, principal: parseFloat(form.principal), description: form.description || null });
+      await onCreate({ name: form.name, principal: parseFloat(form.principal), description: form.description || null, priority: form.priority });
       toast.success('Debt added!');
       onClose();
     } catch (err) { toast.error(err.message); }
@@ -56,10 +56,20 @@ function AddDebtModal({ onClose, onCreate }) {
           <input id="debt-name" type="text" className="input" placeholder="e.g. Student Loan" required
             value={form.name} onChange={(e) => set('name', e.target.value)} autoFocus />
         </div>
-        <div className="form-group">
-          <label className="label">Amount (₹)</label>
-          <input id="debt-principal" type="number" className="input" step="0.01" min="0" placeholder="0.00" required
-            value={form.principal} onChange={(e) => set('principal', e.target.value)} />
+        <div className="form-row">
+          <div className="form-group">
+            <label className="label">Amount (₹)</label>
+            <input id="debt-principal" type="number" className="input" step="0.01" min="0" placeholder="0.00" required
+              value={form.principal} onChange={(e) => set('principal', e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="label">Priority</label>
+            <select id="debt-priority" className="input" value={form.priority} onChange={(e) => set('priority', e.target.value)}>
+              <option value="high">High</option>
+              <option value="normal">Normal</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
         </div>
         <div className="form-group">
           <label className="label">Description (Optional)</label>
@@ -83,6 +93,7 @@ function EditDebtModal({ debt, onClose, onUpdate }) {
     interest_rate: debt.interest_rate ?? '',
     min_payment: debt.min_payment ?? '',
     description: debt.description ?? '',
+    priority: debt.priority || 'normal',
   });
   const [loading, setLoading] = useState(false);
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
@@ -97,6 +108,7 @@ function EditDebtModal({ debt, onClose, onUpdate }) {
         interest_rate: form.interest_rate ? parseFloat(form.interest_rate) : null,
         min_payment: form.min_payment ? parseFloat(form.min_payment) : null,
         description: form.description || null,
+        priority: form.priority,
       });
       toast.success('Debt updated!');
       onClose();
@@ -125,10 +137,20 @@ function EditDebtModal({ debt, onClose, onUpdate }) {
               value={form.min_payment} onChange={(e) => set('min_payment', e.target.value)} />
           </div>
         </div>
-        <div className="form-group">
-          <label className="label">Description (Optional)</label>
-          <textarea id="edit-debt-desc" className="input" placeholder="Notes about this debt..." rows="2"
-            value={form.description} onChange={(e) => set('description', e.target.value)} />
+        <div className="form-row">
+          <div className="form-group">
+            <label className="label">Description (Optional)</label>
+            <textarea id="edit-debt-desc" className="input" placeholder="Notes about this debt..." rows="1"
+              value={form.description} onChange={(e) => set('description', e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="label">Priority</label>
+            <select id="edit-debt-priority" className="input" value={form.priority} onChange={(e) => set('priority', e.target.value)}>
+              <option value="high">High</option>
+              <option value="normal">Normal</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
         </div>
         <p className="text-xs text-muted" style={{ lineHeight: 1.6 }}>
           💡 Leave both fields blank and the budget allocator will distribute payments evenly.
@@ -267,8 +289,12 @@ export default function Debts() {
               >
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <div className="font-bold" style={{ fontSize: 'var(--text-md)' }}>{debt.name}</div>
-                    <div className="text-xs text-muted">
+                    <div className="flex items-center gap-2">
+                      <div className="font-bold" style={{ fontSize: 'var(--text-md)' }}>{debt.name}</div>
+                      {debt.priority === 'high' && <span className="badge badge-negative" style={{ fontSize: '0.65rem' }}>High Priority</span>}
+                      {debt.priority === 'low' && <span className="badge" style={{ fontSize: '0.65rem', opacity: 0.7 }}>Low</span>}
+                    </div>
+                    <div className="text-xs text-muted mt-1">
                       {debt.interest_rate ? `${debt.interest_rate}% APR` : 'No interest'}
                       {debt.min_payment ? ` · Min ${fmt.format(debt.min_payment)}/mo` : ''}
                     </div>
