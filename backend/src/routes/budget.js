@@ -8,17 +8,18 @@ router.use(authenticate);
 
 // POST /api/budget/allocate
 router.post('/allocate', async (req, res) => {
-  const { month, leftover_preference } = req.body;
+  const { month, leftover_preference, manual_allocations = {} } = req.body;
   if (!month) return res.status(400).json({ error: 'month (YYYY-MM) is required' });
 
   const firstOfMonth = `${month}-01`;
 
   // Gather data
-  const [incomeRes, itemsRes, debtsRes, goalsRes] = await Promise.all([
+  const [incomeRes, itemsRes, debtsRes, goalsRes, settingsRes] = await Promise.all([
     supabase.from('income_sources').select('*').eq('user_id', req.userId),
     supabase.from('items').select('*').eq('user_id', req.userId),
     supabase.from('debts').select('*').eq('user_id', req.userId).eq('status', 'active'),
     supabase.from('goals').select('*').eq('user_id', req.userId),
+    supabase.from('user_settings').select('*').eq('user_id', req.userId).single(),
   ]);
 
   if (incomeRes.error) throw incomeRes.error;
@@ -27,12 +28,17 @@ router.post('/allocate', async (req, res) => {
   if (goalsRes.error) throw goalsRes.error;
 
   // Compute total monthly income
-  const totalIncome = incomeRes.data.reduce((sum, src) => {
-    let monthly = Number(src.amount);
-    if (src.frequency === 'weekly') monthly = monthly * 52 / 12;
-    else if (src.frequency === 'one-time') monthly = 0; // not counted in recurring budget
-    return sum + monthly;
-  }, 0);
+  let totalIncome = 0;
+  if (settingsRes.data && settingsRes.data.cycle_income > 0) {
+    totalIncome = Number(settingsRes.data.cycle_income);
+  } else {
+    totalIncome = incomeRes.data.reduce((sum, src) => {
+      let monthly = Number(src.amount);
+      if (src.frequency === 'weekly') monthly = monthly * 52 / 12;
+      else if (src.frequency === 'one-time') monthly = 0; // not counted in recurring budget
+      return sum + monthly;
+    }, 0);
+  }
 
   // Run the allocator
   const allocation = runAllocator({
@@ -42,6 +48,7 @@ router.post('/allocate', async (req, res) => {
     goals: goalsRes.data,
     leftoverPreference: leftover_preference || 'savings',
     month: firstOfMonth,
+    manualAllocations: manual_allocations,
   });
 
   // Upsert budget row
@@ -91,6 +98,7 @@ router.post('/allocate', async (req, res) => {
       target_id: li.target_id,
       allocated_amount: li.allocated_amount,
       spent_amount: 0,
+      is_manual: li.is_manual || false,
     }));
 
     const { error: allocErr } = await supabase.from('budget_allocations').insert(rows);

@@ -4,7 +4,7 @@ import { useItems } from '../hooks/useBudget.js';
 import toast from 'react-hot-toast';
 
 const PRIORITIES = ['essential', 'important', 'optional'];
-const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
 function ItemModal({ initial, onClose, onSave }) {
   const [form, setForm] = useState(initial || {
@@ -40,7 +40,7 @@ function ItemModal({ initial, onClose, onSave }) {
 
           <div className="form-row">
             <div className="form-group">
-              <label className="label">Amount Needed ($)</label>
+              <label className="label">Amount Needed (?)</label>
               <input id="item-amount" type="number" className="input" step="0.01" min="0" placeholder="0.00" required
                 value={form.amount_needed} onChange={(e) => set('amount_needed', e.target.value)} />
             </div>

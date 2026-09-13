@@ -10,6 +10,7 @@ import debtsRoutes from './routes/debts.js';
 import goalsRoutes from './routes/goals.js';
 import budgetRoutes from './routes/budget.js';
 import analyticsRoutes from './routes/analytics.js';
+import settingsRoutes from './routes/settings.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,6 +30,7 @@ app.use('/api/debts', debtsRoutes);
 app.use('/api/goals', goalsRoutes);
 app.use('/api/budget', budgetRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Global error handler
 app.use((err, _req, res, _next) => {

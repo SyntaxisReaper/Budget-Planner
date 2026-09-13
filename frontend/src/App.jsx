@@ -14,6 +14,7 @@ import Debts from './pages/Debts.jsx';
 import Goals from './pages/Goals.jsx';
 import BudgetPlanner from './pages/BudgetPlanner.jsx';
 import Analytics from './pages/Analytics.jsx';
+import Settings from './pages/Settings.jsx';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -50,6 +51,7 @@ function AppShell() {
                     <Route path="/goals" element={<Goals />} />
                     <Route path="/budget" element={<BudgetPlanner />} />
                     <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/settings" element={<Settings />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </main>

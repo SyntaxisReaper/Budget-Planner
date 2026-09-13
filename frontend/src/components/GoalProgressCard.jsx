@@ -1,6 +1,6 @@
 import { AlertTriangle } from 'lucide-react';
 
-const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
 const RADIUS = 40;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;

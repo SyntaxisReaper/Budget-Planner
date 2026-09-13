@@ -1,4 +1,4 @@
-const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 });
 const fmtNum = (n) => fmt.format(n ?? 0);
 
 /**
@@ -58,6 +58,7 @@ export default function AllocationBreakdown({ lineItems = [], totalIncome = 0, a
                       {li.priority && (
                         <span className={`badge badge-${li.priority}`}>{li.priority}</span>
                       )}
+                      {li.is_manual && <span className="badge badge-accent">manual</span>}
                       {isAtRisk && <span className="badge badge-danger">at risk</span>}
                     </div>
                   </div>

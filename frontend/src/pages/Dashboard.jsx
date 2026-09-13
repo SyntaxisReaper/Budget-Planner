@@ -2,7 +2,7 @@ import { TrendingUp, TrendingDown, DollarSign, AlertTriangle } from 'lucide-reac
 import { useAnalytics, useTransactions, useGoals } from '../hooks/useBudget.js';
 import { Link } from 'react-router-dom';
 
-const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 const currentMonth = new Date().toISOString().substring(0, 7);
 
 export default function Dashboard() {

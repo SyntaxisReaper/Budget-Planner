@@ -7,7 +7,7 @@ import { useAnalytics } from '../hooks/useBudget.js';
 import apiClient from '../lib/apiClient.js';
 import { useQuery } from '@tanstack/react-query';
 
-const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
 function buildTrendHistory(currentMonth) {
   const months = [];
@@ -93,7 +93,7 @@ export default function Analytics() {
           <LineChart data={trendData} margin={{ left: 8, right: 8, top: 4, bottom: 4 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
             <XAxis dataKey="month" tick={{ fill: 'var(--color-text-3)', fontSize: 11 }} />
-            <YAxis tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} tick={{ fill: 'var(--color-text-3)', fontSize: 11 }} />
+            <YAxis tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} tick={{ fill: 'var(--color-text-3)', fontSize: 11 }} />
             <Tooltip
               formatter={(v, name) => [fmt.format(v), name]}
               contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-2)', borderRadius: 12, fontSize: 13 }}
@@ -139,7 +139,7 @@ export default function Analytics() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis dataKey="name" tick={{ fill: 'var(--color-text-3)', fontSize: 10 }}
                   tickFormatter={(v) => v.length > 10 ? v.slice(0, 9) + '…' : v} />
-                <YAxis tickFormatter={(v) => `$${v}`} tick={{ fill: 'var(--color-text-3)', fontSize: 10 }} />
+                <YAxis tickFormatter={(v) => `₹${v}`} tick={{ fill: 'var(--color-text-3)', fontSize: 10 }} />
                 <Tooltip formatter={(v) => [fmt.format(v)]}
                   contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-border-2)', borderRadius: 12, fontSize: 12 }}
                 />
