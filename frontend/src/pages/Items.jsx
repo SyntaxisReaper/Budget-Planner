@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useItems } from '../hooks/useBudget.js';
 import toast from 'react-hot-toast';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 
 const PRIORITIES = ['essential', 'important', 'optional'];
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
@@ -102,6 +103,8 @@ function ItemModal({ initial, onClose, onSave, existingCategories }) {
 }
 
 function CategoryColumn({ title, items, onEdit, onDelete }) {
+  const [parent] = useAutoAnimate();
+  
   // Simple hash for distinct colors based on string
   const hashString = (str) => {
     let hash = 0;
@@ -118,10 +121,11 @@ function CategoryColumn({ title, items, onEdit, onDelete }) {
         <span className="badge" style={{ background: `hsl(${hue}, 70%, 65%, 0.1)`, color }}>{items.length}</span>
       </div>
 
-      {items.length === 0 ? (
-        <p className="text-xs text-muted">No items in {title}.</p>
-      ) : (
-        items.map((item) => (
+      <div ref={parent} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        {items.length === 0 ? (
+          <p className="text-xs text-muted">No items in {title}.</p>
+        ) : (
+          items.map((item) => (
           <div key={item.id} className="card card-sm" style={{ background: 'var(--color-bg)', borderColor: 'var(--color-border)' }}>
             <div className="flex items-center justify-between gap-3">
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -144,6 +148,7 @@ function CategoryColumn({ title, items, onEdit, onDelete }) {
           </div>
         ))
       )}
+      </div>
     </div>
   );
 }

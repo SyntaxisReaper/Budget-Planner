@@ -1,9 +1,25 @@
 import { TrendingUp, TrendingDown, DollarSign, AlertTriangle } from 'lucide-react';
 import { useAnalytics, useTransactions, useGoals } from '../hooks/useBudget.js';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { staggerContainer, itemVariants, fadeUp } from '../lib/motion.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 const currentMonth = new Date().toISOString().substring(0, 7);
+
+function StatCard({ icon, iconBg, iconColor, label, value, valueClass }) {
+  return (
+    <motion.div className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
+      <div className="stat-icon" style={{ background: iconBg }}>
+        {icon(iconColor)}
+      </div>
+      <div className="stat-label">{label}</div>
+      <motion.div className={`stat-value ${valueClass}`} variants={fadeUp}>
+        {value}
+      </motion.div>
+    </motion.div>
+  );
+}
 
 export default function Dashboard() {
   const { summary } = useAnalytics(currentMonth);
@@ -20,56 +36,48 @@ export default function Dashboard() {
     .slice(0, 6);
 
   return (
-    <div className="page animate-fade-in">
-      <div className="page-header">
+    <div className="page">
+      <motion.div className="page-header" variants={fadeUp} initial="hidden" animate="visible">
         <h1 className="page-title">Dashboard</h1>
         <p className="page-subtitle">
           {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} · Your financial overview
         </p>
-      </div>
+      </motion.div>
 
-      {/* Stats row */}
-      <div className="grid-4 mb-6">
-        <div className="card stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(113,90,255,0.1)' }}>
-            <DollarSign size={18} color="var(--color-primary)" />
-          </div>
-          <div className="stat-label">Monthly Income</div>
-          <div className="stat-value primary">{s ? fmt.format(s.total_income) : '—'}</div>
-        </div>
+      {/* Stat cards */}
+      <motion.div
+        className="grid-4 mb-6"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+      >
+        <StatCard
+          icon={(c) => <DollarSign size={18} color={c} />}
+          iconBg="rgba(237,237,237,0.08)" iconColor="var(--color-text)"
+          label="Monthly Income" value={s ? fmt.format(s.total_income) : '—'} valueClass="primary"
+        />
+        <StatCard
+          icon={(c) => <TrendingDown size={18} color={c} />}
+          iconBg="rgba(239,68,68,0.1)" iconColor="var(--color-danger)"
+          label="Expenses" value={s ? fmt.format(s.total_expenses) : '—'} valueClass="negative"
+        />
+        <StatCard
+          icon={(c) => <TrendingUp size={18} color={c} />}
+          iconBg="rgba(52,211,153,0.1)" iconColor="var(--color-success)"
+          label="Net Savings" value={s ? fmt.format(s.net_savings) : '—'}
+          valueClass={s && s.net_savings >= 0 ? 'positive' : 'negative'}
+        />
+        <StatCard
+          icon={(c) => <TrendingUp size={18} color={c} />}
+          iconBg="rgba(99,179,237,0.1)" iconColor="hsl(205,75%,65%)"
+          label="Savings Rate" value={s ? `${s.savings_rate}%` : '—'}
+          valueClass={s && s.savings_rate >= 0 ? 'positive' : 'negative'}
+        />
+      </motion.div>
 
-        <div className="card stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(239,68,68,0.1)' }}>
-            <TrendingDown size={18} color="var(--color-danger)" />
-          </div>
-          <div className="stat-label">Expenses</div>
-          <div className="stat-value negative">{s ? fmt.format(s.total_expenses) : '—'}</div>
-        </div>
-
-        <div className="card stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(52,211,153,0.1)' }}>
-            <TrendingUp size={18} color="var(--color-success)" />
-          </div>
-          <div className="stat-label">Net Savings</div>
-          <div className={`stat-value ${s && s.net_savings >= 0 ? 'positive' : 'negative'}`}>
-            {s ? fmt.format(s.net_savings) : '—'}
-          </div>
-        </div>
-
-        <div className="card stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(56,211,159,0.1)' }}>
-            <TrendingUp size={18} color="var(--color-accent)" />
-          </div>
-          <div className="stat-label">Savings Rate</div>
-          <div className={`stat-value ${s && s.savings_rate >= 0 ? 'accent' : 'negative'}`}>
-            {s ? `${s.savings_rate}%` : '—'}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid-2">
-        {/* At-risk goals alert */}
-        <div className="card">
+      <motion.div className="grid-2" variants={staggerContainer} initial="hidden" animate="visible">
+        {/* Goals at risk */}
+        <motion.div className="card" variants={itemVariants}>
           <div className="section-header">
             <div className="section-title">
               {atRiskGoals.length > 0 ? (
@@ -82,17 +90,22 @@ export default function Dashboard() {
           </div>
 
           {atRiskGoals.length > 0 ? (
-            <div className="flex flex-col gap-3">
+            <motion.div className="flex flex-col gap-3" variants={staggerContainer} initial="hidden" animate="visible">
               {atRiskGoals.map((g) => (
-                <div key={g.id} className="flex items-center justify-between" style={{ padding: 'var(--space-3)', background: 'rgba(245,158,11,0.06)', borderRadius: 'var(--radius)', border: '1px solid rgba(245,158,11,0.15)' }}>
+                <motion.div
+                  key={g.id}
+                  variants={itemVariants}
+                  className="flex items-center justify-between"
+                  style={{ padding: 'var(--space-3)', background: 'rgba(245,158,11,0.06)', borderRadius: 'var(--radius)', border: '1px solid rgba(245,158,11,0.15)' }}
+                >
                   <div>
                     <div className="font-semibold text-sm">{g.name}</div>
                     <div className="text-xs text-muted">Needs {fmt.format(g.monthly_needed)}/mo</div>
                   </div>
                   <span className="badge badge-danger">At Risk</span>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           ) : (
             <div className="text-sm text-muted">
               {goals.length === 0 ? (
@@ -102,34 +115,34 @@ export default function Dashboard() {
               )}
             </div>
           )}
-        </div>
+        </motion.div>
 
-        {/* Anomaly flags */}
-        <div className="card">
+        {/* Spending alerts */}
+        <motion.div className="card" variants={itemVariants}>
           <div className="section-header">
             <div className="section-title">📈 Spending Alerts</div>
             <Link to="/analytics" className="btn btn-ghost btn-sm">Analytics</Link>
           </div>
 
           {s?.category_trends?.filter((c) => c.flagged).length > 0 ? (
-            <div className="flex flex-col gap-3">
+            <motion.div className="flex flex-col gap-3" variants={staggerContainer} initial="hidden" animate="visible">
               {s.category_trends.filter((c) => c.flagged).slice(0, 4).map((c) => (
-                <div key={c.item_id} className="flex items-center justify-between">
+                <motion.div key={c.item_id} className="flex items-center justify-between" variants={itemVariants}>
                   <span className="text-sm">{c.name}</span>
                   <span className={`badge ${c.deviation_pct > 0 ? 'badge-danger' : 'badge-success'}`}>
                     {c.deviation_pct > 0 ? '↑' : '↓'} {Math.abs(c.deviation_pct).toFixed(1)}%
                   </span>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           ) : (
             <div className="text-sm text-muted">No spending anomalies this month.</div>
           )}
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Recent Transactions */}
-      <div className="card mt-6">
+      <motion.div className="card mt-6" variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.3 }}>
         <div className="section-header">
           <div className="section-title">Recent Transactions</div>
           <Link to="/transactions" className="btn btn-ghost btn-sm">View All</Link>
@@ -142,16 +155,18 @@ export default function Dashboard() {
             <table>
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Item</th>
-                  <th>Note</th>
-                  <th>Type</th>
+                  <th>Date</th><th>Item</th><th>Note</th><th>Type</th>
                   <th style={{ textAlign: 'right' }}>Amount</th>
                 </tr>
               </thead>
               <tbody>
-                {recentTxns.map((t) => (
-                  <tr key={t.id}>
+                {recentTxns.map((t, i) => (
+                  <motion.tr
+                    key={t.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.35 + i * 0.05, duration: 0.25, ease: 'easeOut' }}
+                  >
                     <td className="text-muted">{new Date(t.date).toLocaleDateString()}</td>
                     <td>{t.items?.name || '—'}</td>
                     <td className="text-muted">{t.note || '—'}</td>
@@ -159,13 +174,13 @@ export default function Dashboard() {
                     <td style={{ textAlign: 'right', fontWeight: 600, color: t.type === 'income' ? 'var(--color-success)' : 'var(--color-text)' }}>
                       {t.type === 'income' ? '+' : '-'}{fmt.format(t.amount)}
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
