@@ -19,14 +19,23 @@ export async function computeAnalytics(userId, month) {
   const currentStart = `${year}-${String(mon).padStart(2, '0')}-01`;
   const currentEnd = lastDayOf(year, mon);
 
-  // Trailing 3 months (not including current)
   const trailing = [];
-  for (let i = 1; i <= 3; i++) {
+  // Also collect history for last 6 months for chart
+  const historyTrends = [];
+
+  for (let i = 1; i <= 5; i++) {
     let m = mon - i;
     let y = year;
     if (m <= 0) { m += 12; y -= 1; }
-    trailing.push({ year: y, month: m });
+    const mStr = String(m).padStart(2, '0');
+    if (i <= 3) trailing.push({ year: y, month: m });
+    
+    historyTrends.push({ year: y, month: m, label: `${mStr}/${String(y).slice(-2)}`, income: 0, expense: 0 });
   }
+
+  // Include current month in history
+  historyTrends.unshift({ year, month: mon, label: `${String(mon).padStart(2, '0')}/${String(year).slice(-2)}`, income: 0, expense: 0 });
+  historyTrends.reverse(); // chronological order
 
   // Fetch current month transactions
   const { data: currentTxns } = await supabase
@@ -71,6 +80,25 @@ export async function computeAnalytics(userId, month) {
     });
   }
 
+  // Fetch all transactions for the last 6 months to build Income vs Expense history
+  const historyStart = `${historyTrends[0].year}-${String(historyTrends[0].month).padStart(2, '0')}-01`;
+  const { data: allHistoryTxns } = await supabase
+    .from('transactions')
+    .select('date, type, amount')
+    .eq('user_id', userId)
+    .gte('date', historyStart)
+    .lte('date', currentEnd);
+
+  (allHistoryTxns || []).forEach(t => {
+    const tYear = parseInt(t.date.substring(0, 4), 10);
+    const tMonth = parseInt(t.date.substring(5, 7), 10);
+    const hNode = historyTrends.find(h => h.year === tYear && h.month === tMonth);
+    if (hNode) {
+      if (t.type === 'income') hNode.income += Number(t.amount);
+      if (t.type === 'expense') hNode.expense += Number(t.amount);
+    }
+  });
+
   // Compute averages and flags
   const categoryTrends = Object.entries(currentSpendByItem).map(([item_id, { name, amount }]) => {
     const history = trailingSpend[item_id] || [];
@@ -86,6 +114,55 @@ export async function computeAnalytics(userId, month) {
     };
   });
 
+  // --- Generate Sankey Data ---
+  const sankeyNodes = [{ name: 'Income' }, { name: 'Savings' }];
+  const sankeyLinks = [];
+
+  let nodeIdx = 2;
+  const categoryIndices = {};
+
+  categoryTrends.forEach(c => {
+    if (c.current_spend > 0) {
+      sankeyNodes.push({ name: c.name || 'Uncategorized' });
+      categoryIndices[c.name || 'Uncategorized'] = nodeIdx;
+      nodeIdx++;
+    }
+  });
+
+  const netSavings = totalIncome - totalExpenses;
+
+  if (netSavings >= 0) {
+    if (netSavings > 0) sankeyLinks.push({ source: 0, target: 1, value: round2(netSavings) });
+    categoryTrends.forEach(c => {
+      if (c.current_spend > 0) {
+        sankeyLinks.push({ source: 0, target: categoryIndices[c.name || 'Uncategorized'], value: round2(c.current_spend) });
+      }
+    });
+  } else {
+    // Deficit scenario
+    sankeyNodes[1] = { name: 'Overspent (Deficit)' };
+    const deficit = Math.abs(netSavings);
+    let remainingIncome = totalIncome;
+
+    categoryTrends.forEach(c => {
+      if (c.current_spend > 0) {
+        const catIdx = categoryIndices[c.name || 'Uncategorized'];
+        const fromIncome = Math.min(c.current_spend, remainingIncome);
+        const fromDeficit = c.current_spend - fromIncome;
+        
+        if (fromIncome > 0) {
+          sankeyLinks.push({ source: 0, target: catIdx, value: round2(fromIncome) });
+          remainingIncome -= fromIncome;
+        }
+        if (fromDeficit > 0) {
+          sankeyLinks.push({ source: 1, target: catIdx, value: round2(fromDeficit) });
+        }
+      }
+    });
+  }
+
+  const sankey = { nodes: sankeyNodes, links: sankeyLinks };
+
   return {
     month,
     total_income: round2(totalIncome),
@@ -94,6 +171,8 @@ export async function computeAnalytics(userId, month) {
     net_savings: round2(totalIncome - totalExpenses),
     category_trends: categoryTrends,
     anomaly_count: categoryTrends.filter((c) => c.flagged).length,
+    sankey,
+    history: historyTrends.map(h => ({ ...h, income: round2(h.income), expense: round2(h.expense) }))
   };
 }
 
