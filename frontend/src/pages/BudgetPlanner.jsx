@@ -5,6 +5,8 @@ import AllocationBreakdown from '../components/AllocationBreakdown.jsx';
 import toast from 'react-hot-toast';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../lib/apiClient.js';
+import { motion } from 'framer-motion';
+import { staggerContainer, itemVariants, fadeUp } from '../lib/motion.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
@@ -21,7 +23,7 @@ export default function BudgetPlanner() {
   const { query: goalsQuery } = useGoals();
   const { data: settings } = useQuery({
     queryKey: ['settings'],
-    queryFn: () => apiClient.get('/settings').then(res => res.data),
+    queryFn: () => apiClient.get('/settings'),
   });
 
   const budget = budgetQuery.data;
@@ -84,20 +86,24 @@ export default function BudgetPlanner() {
   }
 
   return (
-    <div className="page animate-fade-in">
-      <div className="page-header flex justify-between items-end">
+    <div className="page">
+      <motion.div className="page-header flex justify-between items-end" variants={fadeUp} initial="hidden" animate="visible">
         <div>
           <h1 className="page-title">Budget Planner</h1>
           <p className="page-subtitle">Distribute your income across all categories</p>
         </div>
-        <button className={`btn ${isManualMode ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setIsManualMode(!isManualMode)}>
+        <motion.button
+          className={`btn ${isManualMode ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setIsManualMode(!isManualMode)}
+          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+        >
           <HandCoins size={16} /> {isManualMode ? 'Manual Mode: ON' : 'Manual Mode: OFF'}
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
-      <div className="grid-2 mb-6" style={{ alignItems: 'start' }}>
+      <motion.div className="grid-2 mb-6" style={{ alignItems: 'start' }} variants={staggerContainer} initial="hidden" animate="visible">
         {/* Controls */}
-        <div className="card h-full flex flex-col justify-between">
+        <motion.div className="card h-full flex flex-col justify-between" variants={itemVariants}>
           <div>
             <div className="section-title mb-5">⚙️ Allocation Settings</div>
             <div className="flex items-center gap-4" style={{ flexWrap: 'wrap' }}>
@@ -145,11 +151,11 @@ export default function BudgetPlanner() {
               </button>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Manual Allocation Panel */}
         {isManualMode && (
-          <div className="card h-full" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+          <motion.div className="card h-full" style={{ maxHeight: '400px', overflowY: 'auto' }} variants={itemVariants}>
             <div className="section-title mb-4">✍️ Manual Overrides</div>
             <p className="text-xs text-muted mb-4">Set specific amounts below. Leave blank to let the auto-allocator handle it.</p>
             
@@ -176,9 +182,9 @@ export default function BudgetPlanner() {
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
       {/* Results */}
       {budgetQuery.isLoading ? (
@@ -186,26 +192,19 @@ export default function BudgetPlanner() {
       ) : budget ? (
         <>
           {/* Summary cards */}
-          <div className="grid-4 mb-6">
-            <div className="card stat-card">
-              <div className="stat-label">Total Income</div>
-              <div className="stat-value primary">{fmt.format(budget.total_income)}</div>
-            </div>
-            <div className="card stat-card">
-              <div className="stat-label">Allocated</div>
-              <div className="stat-value">{fmt.format(budget.total_allocated)}</div>
-            </div>
-            <div className="card stat-card">
-              <div className="stat-label">Saved</div>
-              <div className="stat-value positive">{fmt.format(budget.total_saved)}</div>
-            </div>
-            <div className="card stat-card">
-              <div className="stat-label">Leftover</div>
-              <div className="stat-value accent">
-                {fmt.format(Math.max(0, Number(budget.total_income) - Number(budget.total_allocated)))}
-              </div>
-            </div>
-          </div>
+          <motion.div className="grid-4 mb-6" variants={staggerContainer} initial="hidden" animate="visible">
+            {[
+              { label: 'Total Income',  value: fmt.format(budget.total_income),     cls: 'primary'  },
+              { label: 'Allocated',     value: fmt.format(budget.total_allocated),  cls: ''         },
+              { label: 'Saved',         value: fmt.format(budget.total_saved),      cls: 'positive' },
+              { label: 'Leftover',      value: fmt.format(Math.max(0, Number(budget.total_income) - Number(budget.total_allocated))), cls: 'accent' },
+            ].map(({ label, value, cls }) => (
+              <motion.div key={label} className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
+                <div className="stat-label">{label}</div>
+                <div className={`stat-value ${cls}`}>{value}</div>
+              </motion.div>
+            ))}
+          </motion.div>
 
           {/* Allocation breakdown */}
           <div className="card">
