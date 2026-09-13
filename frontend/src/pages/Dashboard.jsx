@@ -3,6 +3,8 @@ import { useAnalytics, useTransactions, useGoals } from '../hooks/useBudget.js';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { staggerContainer, itemVariants, fadeUp } from '../lib/motion.js';
+import CashFlowSankey from '../components/CashFlowSankey.jsx';
+import HistoryChart from '../components/HistoryChart.jsx';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 const currentMonth = new Date().toISOString().substring(0, 7);
@@ -74,6 +76,26 @@ export default function Dashboard() {
           valueClass={s && s.savings_rate >= 0 ? 'positive' : 'negative'}
         />
       </motion.div>
+
+      {/* Cash Flow Visual */}
+      {s?.sankey && s.sankey.links.length > 0 && (
+        <motion.div className="card mb-6" variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.1 }}>
+          <div className="section-header">
+            <div className="section-title">💸 Cash Flow Map</div>
+          </div>
+          <CashFlowSankey data={s.sankey} />
+        </motion.div>
+      )}
+
+      {/* 6-Month History Visual */}
+      {s?.history && s.history.length > 0 && (
+        <motion.div className="card mb-6" variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.15 }}>
+          <div className="section-header">
+            <div className="section-title">📊 6-Month Trend</div>
+          </div>
+          <HistoryChart data={s.history} />
+        </motion.div>
+      )}
 
       <motion.div className="grid-2" variants={staggerContainer} initial="hidden" animate="visible">
         {/* Goals at risk */}
