@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Plus, Filter } from 'lucide-react';
 import { useTransactions, useItems } from '../hooks/useBudget.js';
 import toast from 'react-hot-toast';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants } from '../lib/motion.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
@@ -29,8 +32,16 @@ function AddTransactionModal({ items, onClose, onCreate }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <motion.div
+      className="modal-overlay"
+      variants={backdropVariants} initial="hidden" animate="visible" exit="exit"
+      onClick={onClose}
+    >
+      <motion.div
+        className="modal"
+        variants={modalVariants} initial="hidden" animate="visible" exit="exit"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="modal-title">➕ Log Transaction</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="form-row">
@@ -73,8 +84,8 @@ function AddTransactionModal({ items, onClose, onCreate }) {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -82,6 +93,7 @@ export default function Transactions() {
   const [month, setMonth] = useState(new Date().toISOString().substring(0, 7));
   const [showModal, setShowModal] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
+  const [parent] = useAutoAnimate();
 
   const { query, create } = useTransactions(month);
   const { query: itemsQuery } = useItems();
@@ -94,34 +106,34 @@ export default function Transactions() {
   const totalExpenses = transactions.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
 
   return (
-    <div className="page animate-fade-in">
-      <div className="page-header flex items-center justify-between">
+    <div className="page">
+      <motion.div className="page-header flex items-center justify-between" variants={fadeUp} initial="hidden" animate="visible">
         <div>
           <h1 className="page-title">Transactions</h1>
-          <p className="page-subtitle">Log and track your income & expenses</p>
+          <p className="page-subtitle">Log and track your income &amp; expenses</p>
         </div>
-        <button id="add-txn-btn" className="btn btn-primary" onClick={() => setShowModal(true)}>
+        <motion.button id="add-txn-btn" className="btn btn-primary" onClick={() => setShowModal(true)} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
           <Plus size={16} /> Log Transaction
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {/* Summary row */}
-      <div className="grid-3 mb-6">
-        <div className="card stat-card">
+      <motion.div className="grid-3 mb-6" variants={staggerContainer} initial="hidden" animate="visible">
+        <motion.div className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
           <div className="stat-label">Income</div>
           <div className="stat-value positive">{fmt.format(totalIncome)}</div>
-        </div>
-        <div className="card stat-card">
+        </motion.div>
+        <motion.div className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
           <div className="stat-label">Expenses</div>
           <div className="stat-value negative">{fmt.format(totalExpenses)}</div>
-        </div>
-        <div className="card stat-card">
+        </motion.div>
+        <motion.div className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
           <div className="stat-label">Net</div>
           <div className={`stat-value ${totalIncome - totalExpenses >= 0 ? 'positive' : 'negative'}`}>
             {fmt.format(totalIncome - totalExpenses)}
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Filters */}
       <div className="card">
@@ -158,7 +170,7 @@ export default function Transactions() {
                   <th style={{ textAlign: 'right' }}>Amount</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody ref={parent}>
                 {filtered.map((t) => (
                   <tr key={t.id}>
                     <td className="text-muted" style={{ whiteSpace: 'nowrap' }}>{new Date(t.date).toLocaleDateString()}</td>
@@ -180,9 +192,11 @@ export default function Transactions() {
         )}
       </div>
 
-      {showModal && (
-        <AddTransactionModal items={items} onClose={() => setShowModal(false)} onCreate={create.mutateAsync} />
-      )}
+      <AnimatePresence>
+        {showModal && (
+          <AddTransactionModal items={items} onClose={() => setShowModal(false)} onCreate={create.mutateAsync} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

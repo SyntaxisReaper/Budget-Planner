@@ -1,6 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
+import { AnimatePresence, motion } from 'framer-motion';
 
 import { useSupabaseAuth } from './hooks/useSupabaseAuth.js';
 import Navbar from './components/Navbar.jsx';
@@ -15,18 +16,64 @@ import Goals from './pages/Goals.jsx';
 import BudgetPlanner from './pages/BudgetPlanner.jsx';
 import Analytics from './pages/Analytics.jsx';
 import Settings from './pages/Settings.jsx';
+import { pageVariants } from './lib/motion.js';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
 });
+
+/** Wraps each route so it fades + slides in/out */
+function PageWrapper({ children }) {
+  return (
+    <motion.div
+      variants={pageVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      style={{ minHeight: '100%' }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/** Inner routes uses useLocation so AnimatePresence can key on pathname */
+function AnimatedRoutes() {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <Routes location={location} key={location.pathname}>
+        <Route path="/"             element={<PageWrapper><Dashboard /></PageWrapper>} />
+        <Route path="/transactions" element={<PageWrapper><Transactions /></PageWrapper>} />
+        <Route path="/items"        element={<PageWrapper><Items /></PageWrapper>} />
+        <Route path="/debts"        element={<PageWrapper><Debts /></PageWrapper>} />
+        <Route path="/goals"        element={<PageWrapper><Goals /></PageWrapper>} />
+        <Route path="/budget"       element={<PageWrapper><BudgetPlanner /></PageWrapper>} />
+        <Route path="/analytics"    element={<PageWrapper><Analytics /></PageWrapper>} />
+        <Route path="/settings"     element={<PageWrapper><Settings /></PageWrapper>} />
+        <Route path="*"             element={<Navigate to="/" replace />} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
 
 function AppShell() {
   const { user, loading, signOut } = useSupabaseAuth();
 
   if (loading) {
     return (
-      <div className="loading-page">
-        <div className="spinner" />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: 16 }}>
+        <motion.div
+          animate={{ scale: [0.85, 1.15, 0.85], opacity: [0.4, 1, 0.4] }}
+          transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
+          style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--color-primary)' }}
+        />
+        <motion.p
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
+          style={{ color: 'var(--color-text-3)', fontSize: 'var(--text-sm)' }}
+        >
+          Loading…
+        </motion.p>
       </div>
     );
   }
@@ -34,7 +81,7 @@ function AppShell() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+        <Route path="/login"  element={user ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/signup" element={user ? <Navigate to="/" replace /> : <Signup />} />
         <Route
           path="/*"
@@ -43,17 +90,7 @@ function AppShell() {
               <div className="app-shell">
                 <Navbar user={user} onSignOut={signOut} />
                 <main className="main-content">
-                  <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/transactions" element={<Transactions />} />
-                    <Route path="/items" element={<Items />} />
-                    <Route path="/debts" element={<Debts />} />
-                    <Route path="/goals" element={<Goals />} />
-                    <Route path="/budget" element={<BudgetPlanner />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
+                  <AnimatedRoutes />
                 </main>
               </div>
             </AuthGuard>
@@ -72,14 +109,15 @@ export default function App() {
         position="bottom-right"
         toastOptions={{
           style: {
-            background: '#1c2033',
-            color: '#e8eaf6',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '12px',
+            background: 'var(--color-surface)',
+            color: 'var(--color-text)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius)',
             fontSize: '14px',
+            boxShadow: 'var(--shadow-lg)',
           },
-          success: { iconTheme: { primary: '#34d399', secondary: '#1c2033' } },
-          error:   { iconTheme: { primary: '#ef4444', secondary: '#1c2033' } },
+          success: { iconTheme: { primary: '#34d399', secondary: 'var(--color-surface)' } },
+          error:   { iconTheme: { primary: '#ef4444', secondary: 'var(--color-surface)' } },
         }}
       />
     </QueryClientProvider>

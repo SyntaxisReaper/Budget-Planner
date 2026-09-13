@@ -1,3 +1,5 @@
+import { useAutoAnimate } from '@formkit/auto-animate/react';
+
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 });
 const fmtNum = (n) => fmt.format(n ?? 0);
 
@@ -6,6 +8,8 @@ const fmtNum = (n) => fmt.format(n ?? 0);
  * Props: { lineItems, totalIncome, atRiskGoals }
  */
 export default function AllocationBreakdown({ lineItems = [], totalIncome = 0, atRiskGoals = [] }) {
+  const [parent] = useAutoAnimate();
+  
   if (!lineItems.length) {
     return (
       <div className="empty-state">
@@ -41,7 +45,7 @@ export default function AllocationBreakdown({ lineItems = [], totalIncome = 0, a
       {Object.entries(groups).map(([type, items]) => {
         if (!items.length) return null;
         return (
-          <div key={type} className="mb-6">
+          <div key={type} className="mb-6" ref={parent}>
             <div className="section-title text-sm mb-4" style={{ color: 'var(--color-text-2)' }}>
               {groupLabel[type]}
             </div>

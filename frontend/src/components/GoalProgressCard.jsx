@@ -1,50 +1,63 @@
 import { AlertTriangle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { itemVariants, hoverCard, tapCard } from '../lib/motion.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
 const RADIUS = 40;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-/**
- * GoalProgressCard
- * Props: { goal: { id, name, target_amount, current_amount, target_date, monthly_needed, months_remaining, at_risk } }
- */
 export default function GoalProgressCard({ goal, onEdit, onDelete }) {
   const pct = Math.min(1, Number(goal.current_amount) / Math.max(1, Number(goal.target_amount)));
   const dashOffset = CIRCUMFERENCE * (1 - pct);
   const remaining = Math.max(0, Number(goal.target_amount) - Number(goal.current_amount));
 
-  // Color based on completion
-  const stroke = pct >= 1 ? 'var(--color-success)' : pct > 0.5 ? 'var(--color-accent)' : 'var(--color-primary)';
+  const stroke = pct >= 1 ? 'var(--color-success)' : pct > 0.5 ? 'var(--color-success)' : 'var(--color-text)';
 
   return (
-    <div className={`card ${goal.at_risk ? 'at-risk-card' : ''}`} style={goal.at_risk ? { borderColor: 'rgba(245,158,11,0.3)' } : {}}>
+    <motion.div
+      className={`card ${goal.at_risk ? 'at-risk-card' : ''}`}
+      style={goal.at_risk ? { borderColor: 'rgba(245,158,11,0.3)' } : {}}
+      variants={itemVariants}
+      whileHover={hoverCard}
+      whileTap={tapCard}
+      layout
+    >
       {goal.at_risk && (
-        <div className="flex items-center gap-2 mb-4" style={{ color: 'var(--color-warning)', fontSize: 'var(--text-xs)', fontWeight: 600 }}>
+        <motion.div
+          className="flex items-center gap-2 mb-4"
+          style={{ color: 'var(--color-warning)', fontSize: 'var(--text-xs)', fontWeight: 600 }}
+          initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }}
+        >
           <AlertTriangle size={12} />
           AT RISK — underfunded this period
-        </div>
+        </motion.div>
       )}
 
       <div className="goal-ring-wrapper">
-        {/* SVG ring */}
+        {/* Animated SVG ring */}
         <div className="goal-ring">
           <svg width="96" height="96" viewBox="0 0 96 96">
             <circle className="goal-ring-bg" cx="48" cy="48" r={RADIUS} strokeWidth="8" />
-            <circle
+            <motion.circle
               className="goal-ring-fill"
               cx="48" cy="48" r={RADIUS}
               strokeWidth="8"
               stroke={stroke}
               strokeDasharray={CIRCUMFERENCE}
-              strokeDashoffset={dashOffset}
               strokeLinecap="round"
+              initial={{ strokeDashoffset: CIRCUMFERENCE }}
+              animate={{ strokeDashoffset: dashOffset }}
+              transition={{ duration: 1.1, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.1 }}
             />
           </svg>
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', top: 0, left: 0, width: 96, height: 96 }}>
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text)' }}>
+            <motion.span
+              style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-text)' }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+            >
               {Math.round(pct * 100)}%
-            </span>
+            </motion.span>
           </div>
         </div>
 
@@ -60,31 +73,39 @@ export default function GoalProgressCard({ goal, onEdit, onDelete }) {
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* Animated progress bar */}
       <div className="progress-bar mt-4">
-        <div className="progress-fill" style={{ width: `${pct * 100}%`, background: stroke }} />
+        <motion.div
+          className="progress-fill"
+          style={{ background: stroke }}
+          initial={{ width: 0 }}
+          animate={{ width: `${pct * 100}%` }}
+          transition={{ duration: 0.9, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.15 }}
+        />
       </div>
 
-      {/* Monthly target */}
       {goal.monthly_needed != null && goal.monthly_needed > 0 && (
-        <div className="mt-4 flex justify-between text-xs text-muted">
+        <motion.div
+          className="mt-4 flex justify-between text-xs text-muted"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
+        >
           <span>Monthly needed</span>
           <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{fmt.format(goal.monthly_needed)}</span>
-        </div>
+        </motion.div>
       )}
 
       <div className="flex gap-2 mt-5">
         {onEdit && (
-          <button id={`goal-edit-${goal.id}`} className="btn btn-ghost btn-sm" onClick={() => onEdit(goal)}>
+          <motion.button id={`goal-edit-${goal.id}`} className="btn btn-ghost btn-sm" onClick={() => onEdit(goal)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             Edit
-          </button>
+          </motion.button>
         )}
         {onDelete && (
-          <button id={`goal-delete-${goal.id}`} className="btn btn-danger btn-sm" onClick={() => onDelete(goal.id)}>
+          <motion.button id={`goal-delete-${goal.id}`} className="btn btn-danger btn-sm" onClick={() => onDelete(goal.id)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             Delete
-          </button>
+          </motion.button>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

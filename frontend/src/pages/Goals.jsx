@@ -3,6 +3,11 @@ import { Plus } from 'lucide-react';
 import { useGoals } from '../hooks/useBudget.js';
 import GoalProgressCard from '../components/GoalProgressCard.jsx';
 import toast from 'react-hot-toast';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants } from '../lib/motion.js';
+
+const fmtINR = (n) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(n);
 
 function GoalModal({ initial, onClose, onSave }) {
   const [form, setForm] = useState(initial || { name: '', target_amount: '', current_amount: '0', target_date: '' });
@@ -25,8 +30,16 @@ function GoalModal({ initial, onClose, onSave }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <motion.div
+      className="modal-overlay"
+      variants={backdropVariants} initial="hidden" animate="visible" exit="exit"
+      onClick={onClose}
+    >
+      <motion.div
+        className="modal"
+        variants={modalVariants} initial="hidden" animate="visible" exit="exit"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="modal-title">{initial ? '✏️ Edit Goal' : '🎯 New Goal'}</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="form-group">
@@ -36,12 +49,12 @@ function GoalModal({ initial, onClose, onSave }) {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label className="label">Target Amount (?)</label>
+              <label className="label">Target Amount (₹)</label>
               <input id="goal-target" type="number" className="input" step="0.01" min="0" placeholder="5000.00" required
                 value={form.target_amount} onChange={(e) => set('target_amount', e.target.value)} />
             </div>
             <div className="form-group">
-              <label className="label">Current Saved (?)</label>
+              <label className="label">Current Saved (₹)</label>
               <input id="goal-current" type="number" className="input" step="0.01" min="0" placeholder="0.00"
                 value={form.current_amount} onChange={(e) => set('current_amount', e.target.value)} />
             </div>
@@ -58,18 +71,19 @@ function GoalModal({ initial, onClose, onSave }) {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
 export default function Goals() {
   const { query, create, update, remove } = useGoals();
   const [modal, setModal] = useState(null);
+  const [parent] = useAutoAnimate();
 
   const goals = query.data || [];
   const totalTarget = goals.reduce((s, g) => s + Number(g.target_amount), 0);
-  const totalSaved = goals.reduce((s, g) => s + Number(g.current_amount), 0);
+  const totalSaved  = goals.reduce((s, g) => s + Number(g.current_amount), 0);
   const atRisk = goals.filter((g) => g.at_risk).length;
 
   async function handleDelete(id) {
@@ -84,8 +98,8 @@ export default function Goals() {
   }
 
   return (
-    <div className="page animate-fade-in">
-      <div className="page-header flex items-center justify-between">
+    <div className="page">
+      <motion.div className="page-header flex items-center justify-between" variants={fadeUp} initial="hidden" animate="visible">
         <div>
           <h1 className="page-title">Goals</h1>
           <p className="page-subtitle">
@@ -93,37 +107,35 @@ export default function Goals() {
             {atRisk > 0 && <span style={{ color: 'var(--color-warning)', marginLeft: 8 }}>⚠️ {atRisk} at risk</span>}
           </p>
         </div>
-        <button id="add-goal-btn" className="btn btn-primary" onClick={() => setModal('add')}>
+        <motion.button id="add-goal-btn" className="btn btn-primary" onClick={() => setModal('add')} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
           <Plus size={16} /> Add Goal
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {/* Summary */}
-      <div className="grid-3 mb-6">
-        <div className="card stat-card">
-          <div className="stat-label">Total Target</div>
-          <div className="stat-value primary">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(totalTarget)}</div>
-        </div>
-        <div className="card stat-card">
-          <div className="stat-label">Total Saved</div>
-          <div className="stat-value positive">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(totalSaved)}</div>
-        </div>
-        <div className="card stat-card">
-          <div className="stat-label">Still Needed</div>
-          <div className="stat-value">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Math.max(0, totalTarget - totalSaved))}</div>
-        </div>
-      </div>
+      <motion.div className="grid-3 mb-6" variants={staggerContainer} initial="hidden" animate="visible">
+        {[
+          { label: 'Total Target',   value: fmtINR(totalTarget),                        cls: 'primary'  },
+          { label: 'Total Saved',    value: fmtINR(totalSaved),                         cls: 'positive' },
+          { label: 'Still Needed',   value: fmtINR(Math.max(0, totalTarget - totalSaved)), cls: ''      },
+        ].map(({ label, value, cls }) => (
+          <motion.div key={label} className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
+            <div className="stat-label">{label}</div>
+            <div className={`stat-value ${cls}`}>{value}</div>
+          </motion.div>
+        ))}
+      </motion.div>
 
       {query.isLoading ? (
         <div className="empty-state"><div className="spinner" /></div>
       ) : goals.length === 0 ? (
-        <div className="card empty-state">
+        <motion.div className="card empty-state" variants={itemVariants} initial="hidden" animate="visible">
           <div className="empty-state-icon"><span style={{ fontSize: 28 }}>🎯</span></div>
           <p>No goals yet. Set your first financial target!</p>
           <button className="btn btn-primary btn-sm" onClick={() => setModal('add')}>Add a Goal</button>
-        </div>
+        </motion.div>
       ) : (
-        <div className="grid-2">
+        <div className="grid-2" ref={parent}>
           {goals.map((goal) => (
             <GoalProgressCard
               key={goal.id}
@@ -135,13 +147,15 @@ export default function Goals() {
         </div>
       )}
 
-      {modal && (
-        <GoalModal
-          initial={modal === 'add' ? null : modal}
-          onClose={() => setModal(null)}
-          onSave={handleSave}
-        />
-      )}
+      <AnimatePresence>
+        {modal && (
+          <GoalModal
+            initial={modal === 'add' ? null : modal}
+            onClose={() => setModal(null)}
+            onSave={handleSave}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
