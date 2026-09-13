@@ -36,12 +36,12 @@ function GoalModal({ initial, onClose, onSave }) {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label className="label">Target Amount ($)</label>
+              <label className="label">Target Amount (?)</label>
               <input id="goal-target" type="number" className="input" step="0.01" min="0" placeholder="5000.00" required
                 value={form.target_amount} onChange={(e) => set('target_amount', e.target.value)} />
             </div>
             <div className="form-group">
-              <label className="label">Current Saved ($)</label>
+              <label className="label">Current Saved (?)</label>
               <input id="goal-current" type="number" className="input" step="0.01" min="0" placeholder="0.00"
                 value={form.current_amount} onChange={(e) => set('current_amount', e.target.value)} />
             </div>
@@ -102,15 +102,15 @@ export default function Goals() {
       <div className="grid-3 mb-6">
         <div className="card stat-card">
           <div className="stat-label">Total Target</div>
-          <div className="stat-value primary">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalTarget)}</div>
+          <div className="stat-value primary">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(totalTarget)}</div>
         </div>
         <div className="card stat-card">
           <div className="stat-label">Total Saved</div>
-          <div className="stat-value positive">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalSaved)}</div>
+          <div className="stat-value positive">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(totalSaved)}</div>
         </div>
         <div className="card stat-card">
           <div className="stat-label">Still Needed</div>
-          <div className="stat-value">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.max(0, totalTarget - totalSaved))}</div>
+          <div className="stat-value">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Math.max(0, totalTarget - totalSaved))}</div>
         </div>
       </div>
 

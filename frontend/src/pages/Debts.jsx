@@ -6,10 +6,10 @@ import toast from 'react-hot-toast';
 import apiClient from '../lib/apiClient.js';
 import { useQuery } from '@tanstack/react-query';
 
-const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
 function AddDebtModal({ onClose, onCreate }) {
-  const [form, setForm] = useState({ name: '', principal: '' });
+  const [form, setForm] = useState({ name: '', principal: '', description: '' });
   const [loading, setLoading] = useState(false);
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -17,7 +17,7 @@ function AddDebtModal({ onClose, onCreate }) {
     e.preventDefault();
     setLoading(true);
     try {
-      await onCreate({ name: form.name, principal: parseFloat(form.principal) });
+      await onCreate({ name: form.name, principal: parseFloat(form.principal), description: form.description || null });
       toast.success('Debt added!');
       onClose();
     } catch (err) { toast.error(err.message); }
@@ -35,9 +35,14 @@ function AddDebtModal({ onClose, onCreate }) {
               value={form.name} onChange={(e) => set('name', e.target.value)} autoFocus />
           </div>
           <div className="form-group">
-            <label className="label">Amount ($)</label>
+            <label className="label">Amount (?)</label>
             <input id="debt-principal" type="number" className="input" step="0.01" min="0" placeholder="0.00" required
               value={form.principal} onChange={(e) => set('principal', e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="label">Description (Optional)</label>
+            <textarea id="debt-desc" className="input" placeholder="Notes about this debt..." rows="2"
+              value={form.description} onChange={(e) => set('description', e.target.value)} />
           </div>
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
@@ -61,6 +66,7 @@ function EditDebtModal({ debt, onClose, onUpdate }) {
     name: debt.name,
     interest_rate: debt.interest_rate ?? '',
     min_payment: debt.min_payment ?? '',
+    description: debt.description ?? '',
   });
   const [loading, setLoading] = useState(false);
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
@@ -72,9 +78,9 @@ function EditDebtModal({ debt, onClose, onUpdate }) {
       await onUpdate({
         id: debt.id,
         name: form.name,
-        // Send null explicitly to clear these fields
-        interest_rate: form.interest_rate !== '' ? parseFloat(form.interest_rate) : null,
-        min_payment: form.min_payment !== '' ? parseFloat(form.min_payment) : null,
+        interest_rate: form.interest_rate ? parseFloat(form.interest_rate) : null,
+        min_payment: form.min_payment ? parseFloat(form.min_payment) : null,
+        description: form.description || null,
       });
       toast.success('Debt updated!');
       onClose();
@@ -95,17 +101,21 @@ function EditDebtModal({ debt, onClose, onUpdate }) {
 
           <div className="form-row">
             <div className="form-group">
-              <label className="label">Annual Interest Rate (%)</label>
-              <input id="edit-debt-rate" type="number" className="input" step="0.01" min="0"
-                placeholder="Leave blank = no interest"
+              <label className="label">Interest Rate (%)</label>
+              <input id="edit-debt-rate" type="number" className="input" step="0.01" min="0" placeholder="0.00"
                 value={form.interest_rate} onChange={(e) => set('interest_rate', e.target.value)} />
             </div>
             <div className="form-group">
-              <label className="label">Min Payment / month ($)</label>
-              <input id="edit-debt-minpay" type="number" className="input" step="0.01" min="0"
-                placeholder="Leave blank = auto-allocate"
+              <label className="label">Min Payment / month (₹)</label>
+              <input id="edit-debt-min" type="number" className="input" step="0.01" min="0" placeholder="0.00"
                 value={form.min_payment} onChange={(e) => set('min_payment', e.target.value)} />
             </div>
+          </div>
+
+          <div className="form-group">
+            <label className="label">Description (Optional)</label>
+            <textarea id="edit-debt-desc" className="input" placeholder="Notes about this debt..." rows="2"
+              value={form.description} onChange={(e) => set('description', e.target.value)} />
           </div>
 
           <p className="text-xs text-muted" style={{ lineHeight: 1.6 }}>
@@ -147,7 +157,7 @@ function LogPaymentModal({ debt, onClose, onLog }) {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="form-row">
             <div className="form-group">
-              <label className="label">Amount ($)</label>
+              <label className="label">Amount (?)</label>
               <input id="pay-amount" type="number" className="input" step="0.01" min="0" placeholder="0.00" required
                 value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} autoFocus />
             </div>

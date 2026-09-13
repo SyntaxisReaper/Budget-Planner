@@ -1,17 +1,18 @@
-import { NavLink } from 'react-router-dom';
-import {
-  LayoutDashboard, ArrowLeftRight, ShoppingCart, CreditCard,
-  Target, Calculator, BarChart3, LogOut, Wallet
+import { NavLink, useLocation, Link } from 'react-router-dom';
+import { 
+  LayoutDashboard, ReceiptText, ShoppingCart, 
+  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet 
 } from 'lucide-react';
 
 const links = [
   { to: '/',            icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/transactions',icon: ArrowLeftRight,  label: 'Transactions' },
+  { to: '/transactions',icon: ReceiptText,     label: 'Transactions' },
   { to: '/items',       icon: ShoppingCart,    label: 'Items' },
   { to: '/debts',       icon: CreditCard,      label: 'Debts' },
   { to: '/goals',       icon: Target,          label: 'Goals' },
-  { to: '/budget',      icon: Calculator,      label: 'Budget Planner' },
+  { to: '/budget',      icon: Calculator,      label: 'Budget' },
   { to: '/analytics',   icon: BarChart3,       label: 'Analytics' },
+  { to: '/settings',    icon: SettingsIcon,    label: 'Settings' },
 ];
 
 export default function Navbar({ user, onSignOut }) {

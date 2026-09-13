@@ -12,8 +12,8 @@ export function useBudget(month) {
   });
 
   const allocateMutation = useMutation({
-    mutationFn: ({ month: m, leftover_preference }) =>
-      apiClient.post('/budget/allocate', { month: m || monthKey, leftover_preference }),
+    mutationFn: ({ month: m, leftover_preference, manual_allocations }) =>
+      apiClient.post('/budget/allocate', { month: m || monthKey, leftover_preference, manual_allocations }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budget'] });
     },

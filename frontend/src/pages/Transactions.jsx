@@ -3,7 +3,7 @@ import { Plus, Filter } from 'lucide-react';
 import { useTransactions, useItems } from '../hooks/useBudget.js';
 import toast from 'react-hot-toast';
 
-const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
 function AddTransactionModal({ items, onClose, onCreate }) {
   const [form, setForm] = useState({
@@ -42,7 +42,7 @@ function AddTransactionModal({ items, onClose, onCreate }) {
               </select>
             </div>
             <div className="form-group">
-              <label className="label">Amount ($)</label>
+              <label className="label">Amount (?)</label>
               <input id="txn-amount" type="number" className="input" step="0.01" min="0" placeholder="0.00" required
                 value={form.amount} onChange={(e) => set('amount', e.target.value)} />
             </div>
