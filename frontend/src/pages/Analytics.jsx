@@ -6,6 +6,8 @@ import {
 import { useAnalytics } from '../hooks/useBudget.js';
 import apiClient from '../lib/apiClient.js';
 import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
+import { staggerContainer, itemVariants, fadeUp } from '../lib/motion.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
@@ -52,39 +54,30 @@ export default function Analytics() {
   const trends = s?.category_trends || [];
 
   return (
-    <div className="page animate-fade-in">
-      <div className="page-header flex items-center justify-between">
+    <div className="page">
+      <motion.div className="page-header flex items-center justify-between" variants={fadeUp} initial="hidden" animate="visible">
         <div>
           <h1 className="page-title">Analytics</h1>
           <p className="page-subtitle">Spending trends, savings rate, and anomaly detection</p>
         </div>
         <input id="analytics-month" type="month" className="input" value={month}
           onChange={(e) => setMonth(e.target.value)} style={{ width: 'auto' }} />
-      </div>
+      </motion.div>
 
       {/* KPI cards */}
-      <div className="grid-4 mb-6">
-        <div className="card stat-card">
-          <div className="stat-label">Income</div>
-          <div className="stat-value primary">{s ? fmt.format(s.total_income) : '—'}</div>
-        </div>
-        <div className="card stat-card">
-          <div className="stat-label">Expenses</div>
-          <div className="stat-value negative">{s ? fmt.format(s.total_expenses) : '—'}</div>
-        </div>
-        <div className="card stat-card">
-          <div className="stat-label">Net Savings</div>
-          <div className={`stat-value ${s && s.net_savings >= 0 ? 'positive' : 'negative'}`}>
-            {s ? fmt.format(s.net_savings) : '—'}
-          </div>
-        </div>
-        <div className="card stat-card">
-          <div className="stat-label">Savings Rate</div>
-          <div className={`stat-value ${s && s.savings_rate >= 0 ? 'accent' : 'negative'}`}>
-            {s ? `${s.savings_rate}%` : '—'}
-          </div>
-        </div>
-      </div>
+      <motion.div className="grid-4 mb-6" variants={staggerContainer} initial="hidden" animate="visible">
+        {[
+          { label: 'Income',       value: s ? fmt.format(s.total_income)  : '—', cls: 'primary'  },
+          { label: 'Expenses',     value: s ? fmt.format(s.total_expenses): '—', cls: 'negative' },
+          { label: 'Net Savings',  value: s ? fmt.format(s.net_savings)   : '—', cls: s && s.net_savings >= 0 ? 'positive' : 'negative' },
+          { label: 'Savings Rate', value: s ? `${s.savings_rate}%`        : '—', cls: s && s.savings_rate >= 0 ? 'accent' : 'negative' },
+        ].map(({ label, value, cls }) => (
+          <motion.div key={label} className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
+            <div className="stat-label">{label}</div>
+            <div className={`stat-value ${cls}`}>{value}</div>
+          </motion.div>
+        ))}
+      </motion.div>
 
       {/* Savings rate trend */}
       <div className="card mb-6">

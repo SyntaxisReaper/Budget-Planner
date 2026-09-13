@@ -133,9 +133,28 @@ router.get('/:month', async (req, res) => {
   const { data: allocations, error: allocErr } = await supabase
     .from('budget_allocations')
     .select('*')
-    .eq('budget_id', budget.id);
+    .eq('budget_id', budget.id)
+    .order('target_type');
 
   if (allocErr) throw allocErr;
+
+  // For any rows still missing a name (old data), resolve from source tables
+  const missing = allocations.filter(a => !a.name);
+  if (missing.length > 0) {
+    const [itemIds, debtIds, goalIds] = [
+      missing.filter(a => a.target_type === 'item').map(a => a.target_id),
+      missing.filter(a => a.target_type === 'debt').map(a => a.target_id),
+      missing.filter(a => a.target_type === 'goal').map(a => a.target_id),
+    ];
+    const [itemsR, debtsR, goalsR] = await Promise.all([
+      itemIds.length ? supabase.from('items').select('id,name').in('id', itemIds) : { data: [] },
+      debtIds.length ? supabase.from('debts').select('id,name').in('id', debtIds) : { data: [] },
+      goalIds.length ? supabase.from('goals').select('id,name').in('id', goalIds) : { data: [] },
+    ]);
+    const nameMap = {};
+    [...(itemsR.data||[]), ...(debtsR.data||[]), ...(goalsR.data||[])].forEach(r => { nameMap[r.id] = r.name; });
+    allocations.forEach(a => { if (!a.name) a.name = nameMap[a.target_id] || a.target_id; });
+  }
 
   res.json({ ...budget, allocations });
 });

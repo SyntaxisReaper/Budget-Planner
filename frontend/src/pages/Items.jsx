@@ -3,6 +3,8 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useItems } from '../hooks/useBudget.js';
 import toast from 'react-hot-toast';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants } from '../lib/motion.js';
 
 const PRIORITIES = ['essential', 'important', 'optional'];
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
@@ -29,8 +31,16 @@ function ItemModal({ initial, onClose, onSave, existingCategories }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <motion.div
+      className="modal-overlay"
+      variants={backdropVariants} initial="hidden" animate="visible" exit="exit"
+      onClick={onClose}
+    >
+      <motion.div
+        className="modal"
+        variants={modalVariants} initial="hidden" animate="visible" exit="exit"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="modal-title">{initial ? '✏️ Edit Item' : '➕ Add Item'}</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="form-row">
@@ -97,8 +107,8 @@ function ItemModal({ initial, onClose, onSave, existingCategories }) {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -192,16 +202,16 @@ export default function Items() {
   }
 
   return (
-    <div className="page animate-fade-in">
-      <div className="page-header flex items-center justify-between">
+    <div className="page">
+      <motion.div className="page-header flex items-center justify-between" variants={fadeUp} initial="hidden" animate="visible">
         <div>
           <h1 className="page-title">Items</h1>
-          <p className="page-subtitle">Manage needs & expense categories · Total needed: {fmt.format(totalNeeded)}</p>
+          <p className="page-subtitle">Manage needs &amp; expense categories · Total needed: {fmt.format(totalNeeded)}</p>
         </div>
-        <button id="add-item-btn" className="btn btn-primary" onClick={() => setModal('add')}>
+        <motion.button id="add-item-btn" className="btn btn-primary" onClick={() => setModal('add')} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
           <Plus size={16} /> Add Item
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       <div className="grid-auto">
         {existingCategories.length === 0 ? (
@@ -221,14 +231,16 @@ export default function Items() {
         )}
       </div>
 
-      {modal && (
-        <ItemModal
-          initial={modal === 'add' ? null : modal}
-          onClose={() => setModal(null)}
-          onSave={handleSave}
-          existingCategories={existingCategories}
-        />
-      )}
+      <AnimatePresence>
+        {modal && (
+          <ItemModal
+            initial={modal === 'add' ? null : modal}
+            onClose={() => setModal(null)}
+            onSave={handleSave}
+            existingCategories={existingCategories}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
