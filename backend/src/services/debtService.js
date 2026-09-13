@@ -1,39 +1,17 @@
 /**
- * Debt Payoff Service — Equal Distribution (§3.2)
+ * Debt Payoff Service — Tiered Priority Distribution (§3.2)
  */
 
 /**
- * Distribute a debt payment pool evenly across active debts,
- * respecting min_payment floors and recursively redistributing
- * when a debt's balance would be fully paid off.
- *
- * @param {Array}  debts  - active debt objects with id, remaining_balance, min_payment
- * @param {number} pool   - total amount available for debt payments this period
- * @returns {Object}      - map of debt_id → allocated_amount
+ * Helper to distribute a pool evenly across a specific set of debts,
+ * redistributing when a debt's balance would be fully paid off.
  */
-export function distributeDebtPayments(debts, pool) {
-  const allocations = {};
-  debts.forEach((d) => (allocations[d.id] = 0));
+function distributeEqually(debtsForGroup, allocations, remainingPool) {
+  let pool = remainingPool;
+  let activeForEqual = debtsForGroup.filter((d) => d.remaining_balance > allocations[d.id]);
 
-  let workingDebts = debts.map((d) => ({ ...d, remaining_balance: Number(d.remaining_balance), min_payment: Number(d.min_payment) || 0 }));
-  let remainingPool = pool;
-
-  // Handle min_payment floors first
-  for (const debt of workingDebts) {
-    if (debt.min_payment > 0 && debt.remaining_balance > 0) {
-      const minAlloc = Math.min(debt.min_payment, debt.remaining_balance, remainingPool);
-      allocations[debt.id] += minAlloc;
-      remainingPool -= minAlloc;
-    }
-  }
-
-  // Equal distribution of what's left
-  let activeForEqual = workingDebts.filter(
-    (d) => d.remaining_balance > allocations[d.id] // still has balance to pay
-  );
-
-  while (remainingPool > 0.001 && activeForEqual.length > 0) {
-    const share = remainingPool / activeForEqual.length;
+  while (pool > 0.001 && activeForEqual.length > 0) {
+    const share = pool / activeForEqual.length;
     const nextActive = [];
     let redistributed = 0;
 
@@ -41,7 +19,7 @@ export function distributeDebtPayments(debts, pool) {
       const canTake = Math.max(0, debt.remaining_balance - allocations[debt.id]);
       const give = Math.min(share, canTake);
       allocations[debt.id] += give;
-      remainingPool -= give;
+      pool -= give;
 
       if (canTake - give > 0.001) {
         nextActive.push(debt); // still has room
@@ -50,13 +28,56 @@ export function distributeDebtPayments(debts, pool) {
       }
     }
 
-    remainingPool += redistributed;
+    pool += redistributed;
     activeForEqual = nextActive;
 
     if (redistributed < 0.001) break; // converged
   }
+  return pool;
+}
 
-  // Round all allocations to 2 decimal places
+/**
+ * Distribute a debt payment pool across active debts,
+ * respecting min_payment floors first, then paying off 
+ * extra amounts hierarchically by priority (high > normal > low).
+ *
+ * @param {Array}  debts  - active debt objects
+ * @param {number} pool   - total amount available for debt payments
+ * @returns {Object}      - map of debt_id → allocated_amount
+ */
+export function distributeDebtPayments(debts, pool) {
+  const allocations = {};
+  debts.forEach((d) => (allocations[d.id] = 0));
+
+  let workingDebts = debts.map((d) => ({
+    ...d,
+    remaining_balance: Number(d.remaining_balance),
+    min_payment: Number(d.min_payment) || 0,
+    priority: d.priority || 'normal'
+  }));
+  let remainingPool = pool;
+
+  // 1. Handle min_payment floors first for ALL debts regardless of priority
+  for (const debt of workingDebts) {
+    if (debt.min_payment > 0 && debt.remaining_balance > 0) {
+      const minAlloc = Math.min(debt.min_payment, debt.remaining_balance, remainingPool);
+      allocations[debt.id] += minAlloc;
+      remainingPool -= minAlloc;
+    }
+  }
+
+  // 2. Distribute leftover pool by priority tiers
+  const tiers = ['high', 'normal', 'low'];
+
+  for (const tier of tiers) {
+    if (remainingPool <= 0.001) break;
+    const tierDebts = workingDebts.filter(d => d.priority === tier);
+    if (tierDebts.length > 0) {
+      remainingPool = distributeEqually(tierDebts, allocations, remainingPool);
+    }
+  }
+
+  // 3. Round all allocations to 2 decimal places
   Object.keys(allocations).forEach((id) => {
     allocations[id] = Math.round(allocations[id] * 100) / 100;
   });

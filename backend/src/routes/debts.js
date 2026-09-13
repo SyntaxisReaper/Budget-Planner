@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/debts
 router.post('/', async (req, res) => {
-  const { name, principal, interest_rate, min_payment, description } = req.body;
+  const { name, principal, interest_rate, min_payment, description, priority } = req.body;
   if (!name || principal == null) {
     return res.status(400).json({ error: 'name and principal are required' });
   }
@@ -36,6 +36,7 @@ router.post('/', async (req, res) => {
       min_payment: min_payment ?? null,
       status: 'active',
       description: description ?? null,
+      priority: priority ?? 'normal',
     })
     .select()
     .single();
@@ -46,10 +47,10 @@ router.post('/', async (req, res) => {
 
 // PUT /api/debts/:id
 router.put('/:id', async (req, res) => {
-  const { name, interest_rate, min_payment, status, description } = req.body;
+  const { name, interest_rate, min_payment, status, description, priority } = req.body;
   const { data, error } = await supabase
     .from('debts')
-    .update({ name, interest_rate, min_payment, status, description })
+    .update({ name, interest_rate, min_payment, status, description, priority: priority ?? 'normal' })
     .eq('id', req.params.id)
     .eq('user_id', req.userId)
     .select()
