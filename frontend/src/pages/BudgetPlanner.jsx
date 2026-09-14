@@ -51,7 +51,7 @@ export default function BudgetPlanner() {
       let changed = false;
       budget.allocations.forEach(a => {
         const key = `${a.target_type}_${a.target_id}`;
-        if (current[key] === undefined && a.allocated_amount > 0) {
+        if (current[key] === undefined && a.is_manual) {
           current[key] = a.allocated_amount;
           changed = true;
         }
@@ -142,7 +142,7 @@ export default function BudgetPlanner() {
               {allocateMutation.isPending ? (
                 <><span className="spinner" /> Calculating…</>
               ) : (
-                <><Calculator size={15} /> Run Auto-Allocator</>
+                <><Calculator size={15} /> Calculate & Save Plan</>
               )}
             </button>
             {budget && (
