@@ -4,8 +4,10 @@ import { Toaster } from 'react-hot-toast';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import { useSupabaseAuth } from './hooks/useSupabaseAuth.js';
+import { useVersionCheck } from './hooks/useVersionCheck.js';
 import Navbar from './components/Navbar.jsx';
 import AuthGuard from './components/AuthGuard.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import Dashboard from './pages/Dashboard.jsx';
@@ -59,6 +61,9 @@ function AnimatedRoutes() {
 
 function AppShell() {
   const { user, loading, signOut } = useSupabaseAuth();
+  
+  // Start the background polling for Vercel updates
+  useVersionCheck();
 
   if (loading) {
     return (
@@ -90,7 +95,9 @@ function AppShell() {
               <div className="app-shell">
                 <Navbar user={user} onSignOut={signOut} />
                 <main className="main-content">
-                  <AnimatedRoutes />
+                  <ErrorBoundary>
+                    <AnimatedRoutes />
+                  </ErrorBoundary>
                 </main>
               </div>
             </AuthGuard>
