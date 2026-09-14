@@ -152,11 +152,18 @@ img { display: block; max-width: 100%; }
   .grid-3, .grid-auto { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 768px) {
-  .main-content { margin-left: 0; }
+  .main-content { 
+    margin-left: 0; 
+    padding-top: 60px; /* Space for mobile topbar */
+  }
   .grid-2, .grid-3, .grid-4, .grid-auto { grid-template-columns: 1fr; }
-  .page { padding: var(--space-5); }
+  .page { padding: var(--space-4); }
+  
+  /* Typography scaling */
+  .page-title { font-size: var(--text-xl); }
+  .stat-value { font-size: var(--text-xl); }
+  .auth-title { font-size: var(--text-xl); }
 }
-
 /* ═══════════════════════════════════════════════════════════════
    CARDS — GLASSMORPHISM
 ═══════════════════════════════════════════════════════════════ */
@@ -236,8 +243,51 @@ img { display: block; max-width: 100%; }
   display: flex;
   flex-direction: column;
   padding: var(--space-6);
-  z-index: 100;
+  z-index: 300;
   overflow-y: auto;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-topbar {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  z-index: 200;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-4);
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(2px);
+  z-index: 250;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  .mobile-topbar {
+    display: flex;
+  }
+  .sidebar-overlay.open {
+    display: block;
+    opacity: 1;
+  }
 }
 
 .sidebar-logo {
@@ -375,6 +425,7 @@ img { display: block; max-width: 100%; }
   transition: all 0.15s;
   white-space: nowrap;
   text-decoration: none;
+  min-height: 44px; /* Touch target size */
 }
 
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -435,6 +486,7 @@ img { display: block; max-width: 100%; }
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
   width: 100%;
+  min-height: 44px; /* Touch target size */
 }
 
 /* Override browser autofill bright background */
@@ -485,6 +537,15 @@ img { display: block; max-width: 100%; }
   width: 100%;
   max-width: 480px;
   box-shadow: 0 24px 48px rgba(0,0,0,0.5);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .modal {
+    padding: var(--space-5);
+    border-radius: var(--radius-lg);
+  }
 }
 
 .modal-title {
