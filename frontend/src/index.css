@@ -86,9 +86,10 @@ body {
   font-size: var(--text-base);
   color: var(--color-text);
   background: var(--color-bg);
-  min-height: 100vh;
+  min-height: 100dvh;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -108,19 +109,22 @@ img { display: block; max-width: 100%; }
 ═══════════════════════════════════════════════════════════════ */
 .app-shell {
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
 }
 
 .main-content {
   flex: 1;
   margin-left: var(--sidebar-w);
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--color-bg);
+  min-width: 0;
 }
 
 .page {
   padding: var(--space-8);
   max-width: 1200px;
+  width: 100%;
 }
 
 .page-header {
@@ -175,6 +179,7 @@ img { display: block; max-width: 100%; }
   position: relative;
   overflow: hidden;
   transition: border-color 0.2s, box-shadow 0.2s;
+  min-width: 0;
 }
 
 .card:hover {
@@ -237,7 +242,7 @@ img { display: block; max-width: 100%; }
   top: 0;
   left: 0;
   width: var(--sidebar-w);
-  height: 100vh;
+  height: 100dvh;
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   display: flex;
@@ -689,7 +694,7 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
    AUTH PAGES
 ═══════════════════════════════════════════════════════════════ */
 .auth-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -774,7 +779,7 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* ═══════════════════════════════════════════════════════════════
