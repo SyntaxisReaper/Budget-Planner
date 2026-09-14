@@ -40,7 +40,7 @@ export function runAllocator({ totalIncome, items, activeDebts, goals, leftoverP
   const totalEssentialNeeded = essentials.reduce((s, i) => s + Number(i.amount_needed), 0);
 
   if (totalEssentialNeeded > 0) {
-    const scale = remaining >= totalEssentialNeeded ? 1 : remaining / totalEssentialNeeded;
+    const scale = remaining <= 0 ? 0 : (remaining >= totalEssentialNeeded ? 1 : remaining / totalEssentialNeeded);
     for (const item of essentials) {
       const allocated = round2(Number(item.amount_needed) * scale);
       lineItems.push({ target_type: 'item', target_id: item.id, name: item.name, priority: 'essential', allocated_amount: allocated });
@@ -69,7 +69,7 @@ export function runAllocator({ totalIncome, items, activeDebts, goals, leftoverP
   const totalGoalNeeded = goalContributions.reduce((s, g) => s + g.monthly_needed, 0);
 
   if (totalGoalNeeded > 0) {
-    const scale = remaining >= totalGoalNeeded ? 1 : remaining / totalGoalNeeded;
+    const scale = remaining <= 0 ? 0 : (remaining >= totalGoalNeeded ? 1 : remaining / totalGoalNeeded);
     for (const goal of goalContributions) {
       const allocated = round2(goal.monthly_needed * scale);
       lineItems.push({ target_type: 'goal', target_id: goal.id, name: goal.name, allocated_amount: allocated });
