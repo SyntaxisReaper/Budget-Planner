@@ -60,6 +60,8 @@ router.post('/allocate', async (req, res) => {
     .single();
 
   let budgetId;
+  let spentMap = {};
+
   if (existingBudget) {
     await supabase
       .from('budgets')
@@ -70,6 +72,18 @@ router.post('/allocate', async (req, res) => {
       })
       .eq('id', existingBudget.id);
     budgetId = existingBudget.id;
+
+    // Fetch old allocations to preserve spent_amount
+    const { data: oldAllocs } = await supabase
+      .from('budget_allocations')
+      .select('target_type, target_id, spent_amount')
+      .eq('budget_id', budgetId);
+      
+    if (oldAllocs) {
+      oldAllocs.forEach(a => {
+        spentMap[`${a.target_type}_${a.target_id}`] = Number(a.spent_amount) || 0;
+      });
+    }
 
     // Delete old allocations
     await supabase.from('budget_allocations').delete().eq('budget_id', budgetId);
@@ -97,7 +111,7 @@ router.post('/allocate', async (req, res) => {
       target_type: li.target_type,
       target_id: li.target_id,
       allocated_amount: li.allocated_amount,
-      spent_amount: 0,
+      spent_amount: spentMap[`${li.target_type}_${li.target_id}`] || 0,
       is_manual: li.is_manual || false,
     }));
 
