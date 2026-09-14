@@ -201,7 +201,7 @@ export default function BudgetPlanner() {
               { label: 'Total Income',  value: fmt.format(budget.total_income),     cls: 'primary'  },
               { label: 'Allocated',     value: fmt.format(budget.total_allocated),  cls: ''         },
               { label: 'Saved',         value: fmt.format(budget.total_saved),      cls: 'positive' },
-              { label: 'Leftover',      value: fmt.format(Math.max(0, Number(budget.total_income) - Number(budget.total_allocated))), cls: 'accent' },
+              { label: 'Leftover',      value: fmt.format(Math.max(0, Number(budget.total_income) - Number(budget.total_allocated) - Number(budget.total_saved))), cls: 'text-muted' },
             ].map(({ label, value, cls }) => (
               <motion.div key={label} className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
                 <div className="stat-label">{label}</div>
