@@ -8,16 +8,17 @@
 
 import { supabase } from '../lib/supabase.js';
 import { calculateDebtProjection } from './debtService.js';
+import { computeCycleBounds } from '../utils/dateUtils.js';
 
 /**
  * Compute analytics summary for a given month.
  */
-export async function computeAnalytics(userId, month) {
+export async function computeAnalytics(userId, month, settings) {
   const [year, mon] = month.split('-').map(Number);
 
-  // Build date ranges for current month and past 3 months
-  const currentStart = `${year}-${String(mon).padStart(2, '0')}-01`;
-  const currentEnd = lastDayOf(year, mon);
+  // Build date ranges for current month cycle
+  const currentMonthStr = `${year}-${String(mon).padStart(2, '0')}`;
+  const { start: currentStart, end: currentEnd } = computeCycleBounds(currentMonthStr, settings);
 
   const trailing = [];
   // Also collect history for last 6 months for chart
@@ -63,8 +64,8 @@ export async function computeAnalytics(userId, month) {
   const trailingSpend = {}; // { item_id: [month1, month2, month3] }
 
   for (const { year: ty, month: tm } of trailing) {
-    const start = `${ty}-${String(tm).padStart(2, '0')}-01`;
-    const end = lastDayOf(ty, tm);
+    const trailingMonthStr = `${ty}-${String(tm).padStart(2, '0')}`;
+    const { start, end } = computeCycleBounds(trailingMonthStr, settings);
     const { data: txns } = await supabase
       .from('transactions')
       .select('item_id, amount')
@@ -81,7 +82,8 @@ export async function computeAnalytics(userId, month) {
   }
 
   // Fetch all transactions for the last 6 months to build Income vs Expense history
-  const historyStart = `${historyTrends[0].year}-${String(historyTrends[0].month).padStart(2, '0')}-01`;
+  const historyStartStr = `${historyTrends[0].year}-${String(historyTrends[0].month).padStart(2, '0')}`;
+  const { start: historyStart } = computeCycleBounds(historyStartStr, settings);
   const { data: allHistoryTxns } = await supabase
     .from('transactions')
     .select('date, type, amount')
@@ -191,10 +193,6 @@ export function computeDebtProjections(debts, debtAllocations) {
       ...projection,
     };
   });
-}
-
-function lastDayOf(year, month) {
-  return new Date(year, month, 0).toISOString().split('T')[0];
 }
 
 function round2(n) {
