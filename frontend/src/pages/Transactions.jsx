@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Filter } from 'lucide-react';
-import { useTransactions, useItems } from '../hooks/useBudget.js';
+import { useTransactions, useItems, useSettings } from '../hooks/useBudget.js';
+import { computeCycleBounds } from '../lib/dateUtils.js';
 import toast from 'react-hot-toast';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -97,9 +98,12 @@ export default function Transactions() {
 
   const { query, create } = useTransactions(month);
   const { query: itemsQuery } = useItems();
+  const { data: settings } = useSettings();
 
   const transactions = query.data || [];
   const items = itemsQuery.data || [];
+  
+  const { start: cycleStart, end: cycleEnd } = computeCycleBounds(month, settings?.data || settings);
 
   const filtered = transactions.filter((t) => typeFilter === 'all' || t.type === typeFilter);
   const totalIncome = transactions.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
@@ -110,7 +114,11 @@ export default function Transactions() {
       <motion.div className="page-header flex items-center justify-between" variants={fadeUp} initial="hidden" animate="visible">
         <div>
           <h1 className="page-title">Transactions</h1>
-          <p className="page-subtitle">Log and track your income &amp; expenses</p>
+          <p className="page-subtitle">
+            {settings && (settings.data?.cycle_start_date || settings.cycle_start_date)
+              ? `Cycle: ${new Date(cycleStart).toLocaleDateString()} — ${new Date(cycleEnd).toLocaleDateString()}` 
+              : 'Log and track your income & expenses'}
+          </p>
         </div>
         <motion.button id="add-txn-btn" className="btn btn-primary" onClick={() => setShowModal(true)} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
           <Plus size={16} /> Log Transaction
@@ -120,7 +128,14 @@ export default function Transactions() {
       {/* Summary row */}
       <motion.div className="grid-3 mb-6" variants={staggerContainer} initial="hidden" animate="visible">
         <motion.div className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
-          <div className="stat-label">Income</div>
+          <div className="stat-label flex items-center justify-between">
+            <span>Income</span>
+            {settings && (settings.data?.cycle_income > 0 || settings.cycle_income > 0) && (
+              <span className="text-xs text-muted" style={{ fontWeight: 400 }}>
+                Planned: {fmt.format(settings.data?.cycle_income || settings.cycle_income)}
+              </span>
+            )}
+          </div>
           <div className="stat-value positive">{fmt.format(totalIncome)}</div>
         </motion.div>
         <motion.div className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>

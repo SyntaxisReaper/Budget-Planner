@@ -9,7 +9,13 @@ router.use(authenticate);
 // GET /api/analytics/summary?month=YYYY-MM
 router.get('/summary', async (req, res) => {
   const month = req.query.month || new Date().toISOString().substring(0, 7);
-  const summary = await computeAnalytics(req.userId, month);
+  const { data: settings } = await supabase
+    .from('user_settings')
+    .select('cycle_start_date, cycle_days')
+    .eq('user_id', req.userId)
+    .single();
+
+  const summary = await computeAnalytics(req.userId, month, settings);
   res.json(summary);
 });
 

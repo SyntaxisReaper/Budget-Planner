@@ -1,5 +1,6 @@
 import { TrendingUp, TrendingDown, DollarSign, AlertTriangle } from 'lucide-react';
-import { useAnalytics, useTransactions, useGoals } from '../hooks/useBudget.js';
+import { useBudget, useAnalytics, useSettings, useTransactions, useGoals } from '../hooks/useBudget.js';
+import { computeCycleBounds } from '../lib/dateUtils.js';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { staggerContainer, itemVariants, fadeUp } from '../lib/motion.js';
@@ -9,13 +10,20 @@ import HistoryChart from '../components/HistoryChart.jsx';
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 const currentMonth = new Date().toISOString().substring(0, 7);
 
-function StatCard({ icon, iconBg, iconColor, label, value, valueClass }) {
+function StatCard({ icon, iconBg, iconColor, label, value, valueClass, settings }) {
   return (
     <motion.div className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
       <div className="stat-icon" style={{ background: iconBg }}>
         {icon(iconColor)}
       </div>
-      <div className="stat-label">{label}</div>
+      <div className="stat-label flex items-center justify-between">
+        <span>{label}</span>
+        {label === 'Monthly Income' && settings && (settings.data?.cycle_income > 0 || settings.cycle_income > 0) && (
+          <span className="text-xs text-muted" style={{ fontWeight: 400 }}>
+            Planned: {fmt.format(settings.data?.cycle_income || settings.cycle_income)}
+          </span>
+        )}
+      </div>
       <motion.div className={`stat-value ${valueClass}`} variants={fadeUp}>
         {value}
       </motion.div>
@@ -27,11 +35,14 @@ export default function Dashboard() {
   const { summary } = useAnalytics(currentMonth);
   const { query: txnQuery } = useTransactions(currentMonth);
   const { query: goalsQuery } = useGoals();
+  const { data: settings } = useSettings();
 
   const s = summary.data;
   const transactions = txnQuery.data || [];
   const goals = goalsQuery.data || [];
   const atRiskGoals = goals.filter((g) => g.at_risk);
+
+  const { start: cycleStart, end: cycleEnd } = computeCycleBounds(currentMonth, settings?.data || settings);
 
   const recentTxns = [...transactions]
     .sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -40,10 +51,14 @@ export default function Dashboard() {
   return (
     <div className="page">
       <motion.div className="page-header" variants={fadeUp} initial="hidden" animate="visible">
-        <h1 className="page-title">Dashboard</h1>
-        <p className="page-subtitle">
-          {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} · Your financial overview
-        </p>
+        <div>
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-subtitle">
+            {settings && (settings.data?.cycle_start_date || settings.cycle_start_date)
+              ? `Cycle: ${new Date(cycleStart).toLocaleDateString()} — ${new Date(cycleEnd).toLocaleDateString()}`
+              : `${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} · Your financial overview`}
+          </p>
+        </div>
       </motion.div>
 
       {/* Stat cards */}

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
+import { computeCycleBounds } from '../utils/dateUtils.js';
 
 const router = Router();
 router.use(authenticate);
@@ -14,9 +15,13 @@ router.get('/', async (req, res) => {
     .order('date', { ascending: false });
 
   if (req.query.month) {
-    const [year, month] = req.query.month.split('-');
-    const start = `${year}-${month}-01`;
-    const end = new Date(Number(year), Number(month), 0).toISOString().split('T')[0];
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('cycle_start_date, cycle_days')
+      .eq('user_id', req.userId)
+      .single();
+
+    const { start, end } = computeCycleBounds(req.query.month, settings);
     query = query.gte('date', start).lte('date', end);
   }
 

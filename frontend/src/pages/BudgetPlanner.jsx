@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calculator, ChevronRight, RefreshCw, HandCoins } from 'lucide-react';
-import { useBudget, useIncome, useItems, useDebts, useGoals } from '../hooks/useBudget.js';
+import { useBudget, useIncome, useItems, useDebts, useGoals, useSettings } from '../hooks/useBudget.js';
+import { computeCycleBounds } from '../lib/dateUtils.js';
 import AllocationBreakdown from '../components/AllocationBreakdown.jsx';
 import toast from 'react-hot-toast';
 import { useQuery } from '@tanstack/react-query';
@@ -21,10 +22,9 @@ export default function BudgetPlanner() {
   const { query: itemsQuery } = useItems();
   const { query: debtsQuery } = useDebts();
   const { query: goalsQuery } = useGoals();
-  const { data: settings } = useQuery({
-    queryKey: ['settings'],
-    queryFn: () => apiClient.get('/settings'),
-  });
+  const { data: settings } = useSettings();
+
+  const { start: cycleStart, end: cycleEnd } = computeCycleBounds(month, settings?.data || settings);
 
   const budget = budgetQuery.data;
   const income = incomeQuery.data || [];
@@ -33,8 +33,8 @@ export default function BudgetPlanner() {
   const goals = goalsQuery.data || [];
 
   let totalIncome = 0;
-  if (settings && settings.cycle_income > 0) {
-    totalIncome = Number(settings.cycle_income);
+  if (settings && (settings.cycle_income > 0 || settings.data?.cycle_income > 0)) {
+    totalIncome = Number(settings.cycle_income || settings.data?.cycle_income);
   } else {
     totalIncome = income.reduce((s, src) => {
       let m = Number(src.amount);
@@ -87,10 +87,14 @@ export default function BudgetPlanner() {
 
   return (
     <div className="page">
-      <motion.div className="page-header flex justify-between items-end" variants={fadeUp} initial="hidden" animate="visible">
+      <motion.div className="page-header flex items-center justify-between" variants={fadeUp} initial="hidden" animate="visible" style={{ flexWrap: 'wrap', gap: 'var(--space-4)' }}>
         <div>
           <h1 className="page-title">Budget Planner</h1>
-          <p className="page-subtitle">Distribute your income across all categories</p>
+          <p className="page-subtitle">
+            {settings && (settings.data?.cycle_start_date || settings.cycle_start_date)
+              ? `Cycle: ${new Date(cycleStart).toLocaleDateString()} — ${new Date(cycleEnd).toLocaleDateString()}` 
+              : 'Allocate your income to zero'}
+          </p>
         </div>
         <motion.button
           className={`btn ${isManualMode ? 'btn-primary' : 'btn-ghost'}`}

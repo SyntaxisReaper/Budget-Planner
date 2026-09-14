@@ -148,3 +148,10 @@ export function useAnalytics(month) {
   });
   return { summary, debtProjection };
 }
+
+export function useSettings() {
+  return useQuery({
+    queryKey: ['settings'],
+    queryFn: () => apiClient.get('/settings').catch(() => null),
+  });
+}
