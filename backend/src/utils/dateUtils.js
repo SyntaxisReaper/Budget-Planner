@@ -31,3 +31,28 @@ export function computeCycleBounds(monthStr, settings) {
 
   return { start: startStr, end: endStr };
 }
+
+export function findBudgetMonthForDate(dateStr, settings) {
+  // We need to check the cycle for the month of the date, and the cycle for the previous month.
+  const date = new Date(dateStr);
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + 1; // 1-12
+
+  // Check the cycle for the current month
+  const currentMonthStr = `${year}-${String(month).padStart(2, '0')}`;
+  const currentBounds = computeCycleBounds(currentMonthStr, settings);
+  if (dateStr >= currentBounds.start && dateStr <= currentBounds.end) {
+    return `${currentMonthStr}-01`;
+  }
+
+  // Check the cycle for the previous month
+  const prevMonthDate = new Date(Date.UTC(year, month - 2, 1));
+  const prevMonthStr = `${prevMonthDate.getUTCFullYear()}-${String(prevMonthDate.getUTCMonth() + 1).padStart(2, '0')}`;
+  const prevBounds = computeCycleBounds(prevMonthStr, settings);
+  if (dateStr >= prevBounds.start && dateStr <= prevBounds.end) {
+    return `${prevMonthStr}-01`;
+  }
+  
+  // Default fallback
+  return `${currentMonthStr}-01`;
+}

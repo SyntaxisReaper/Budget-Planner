@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
 import { runAllocator } from '../services/allocator.js';
+import { computeCycleBounds } from '../utils/dateUtils.js';
 
 const router = Router();
 router.use(authenticate);
@@ -73,18 +74,7 @@ router.post('/allocate', async (req, res) => {
       .eq('id', existingBudget.id);
     budgetId = existingBudget.id;
 
-    // Fetch old allocations to preserve spent_amount
-    const { data: oldAllocs } = await supabase
-      .from('budget_allocations')
-      .select('target_type, target_id, spent_amount')
-      .eq('budget_id', budgetId);
-      
-    if (oldAllocs) {
-      oldAllocs.forEach(a => {
-        spentMap[`${a.target_type}_${a.target_id}`] = Number(a.spent_amount) || 0;
-      });
-    }
-
+    // We no longer preserve old allocations because we will dynamically sum them
     // Delete old allocations
     await supabase.from('budget_allocations').delete().eq('budget_id', budgetId);
   } else {
@@ -102,6 +92,25 @@ router.post('/allocate', async (req, res) => {
 
     if (budgetErr) throw budgetErr;
     budgetId = newBudget.id;
+  }
+
+  // Calculate live spent_amount from transactions inside this cycle
+  const { start: cycleStart, end: cycleEnd } = computeCycleBounds(month, settingsRes.data);
+  const { data: txns } = await supabase
+    .from('transactions')
+    .select('item_id, amount')
+    .eq('user_id', req.userId)
+    .eq('type', 'expense')
+    .gte('date', cycleStart)
+    .lte('date', cycleEnd);
+
+  if (txns) {
+    txns.forEach(t => {
+      if (t.item_id) {
+        const key = `item_${t.item_id}`;
+        spentMap[key] = (spentMap[key] || 0) + Number(t.amount);
+      }
+    });
   }
 
   // Insert allocations

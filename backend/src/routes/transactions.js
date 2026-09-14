@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
-import { computeCycleBounds } from '../utils/dateUtils.js';
+import { computeCycleBounds, findBudgetMonthForDate } from '../utils/dateUtils.js';
 
 const router = Router();
 router.use(authenticate);
@@ -50,10 +50,15 @@ router.post('/', async (req, res) => {
 
   // Update budget_allocations spent_amount if an item_id provided
   if (item_id && type === 'expense') {
-    const currentMonth = date.substring(0, 7);
-    const firstOfMonth = `${currentMonth}-01`;
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('cycle_start_date, cycle_days')
+      .eq('user_id', req.userId)
+      .single();
 
-    // Find the budget for this month
+    const firstOfMonth = findBudgetMonthForDate(date, settings);
+
+    // Find the budget for this cycle
     const { data: budget } = await supabase
       .from('budgets')
       .select('id')
