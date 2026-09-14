@@ -13,7 +13,6 @@ function distributeEqually(debtsForGroup, allocations, remainingPool) {
   while (pool > 0.001 && activeForEqual.length > 0) {
     const share = pool / activeForEqual.length;
     const nextActive = [];
-    let redistributed = 0;
 
     for (const debt of activeForEqual) {
       const canTake = Math.max(0, debt.remaining_balance - allocations[debt.id]);
@@ -23,15 +22,15 @@ function distributeEqually(debtsForGroup, allocations, remainingPool) {
 
       if (canTake - give > 0.001) {
         nextActive.push(debt); // still has room
-      } else {
-        redistributed += share - give; // excess to redistribute
       }
     }
 
-    pool += redistributed;
+    if (activeForEqual.length === nextActive.length) {
+      // Everyone took their full share; pool is fully drained
+      break; 
+    }
+    
     activeForEqual = nextActive;
-
-    if (redistributed < 0.001) break; // converged
   }
   return pool;
 }
