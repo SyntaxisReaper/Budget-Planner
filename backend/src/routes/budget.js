@@ -11,15 +11,18 @@ router.use(authenticate);
 router.post('/allocate', async (req, res) => {
   const { month, leftover_preference, manual_allocations = {} } = req.body;
   if (!month) return res.status(400).json({ error: 'month (YYYY-MM) is required' });
+  if (leftover_preference && !['savings', 'debt'].includes(leftover_preference)) {
+    return res.status(400).json({ error: 'leftover_preference must be savings or debt' });
+  }
 
   const firstOfMonth = `${month}-01`;
 
   // Gather data
   const [incomeRes, itemsRes, debtsRes, goalsRes, settingsRes] = await Promise.all([
-    supabase.from('income_sources').select('*').eq('user_id', req.userId),
-    supabase.from('items').select('*').eq('user_id', req.userId),
-    supabase.from('debts').select('*').eq('user_id', req.userId).eq('status', 'active'),
-    supabase.from('goals').select('*').eq('user_id', req.userId),
+    supabase.from('income_sources').select('*').eq('user_id', req.userId).order('created_at'),
+    supabase.from('items').select('*').eq('user_id', req.userId).order('priority').order('created_at'),
+    supabase.from('debts').select('*').eq('user_id', req.userId).eq('status', 'active').order('priority').order('created_at'),
+    supabase.from('goals').select('*').eq('user_id', req.userId).order('created_at'),
     supabase.from('user_settings').select('*').eq('user_id', req.userId).single(),
   ]);
 
