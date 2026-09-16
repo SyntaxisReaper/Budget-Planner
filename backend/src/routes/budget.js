@@ -22,7 +22,7 @@ router.post('/allocate', async (req, res) => {
     supabase.from('income_sources').select('*').eq('user_id', req.userId).order('created_at'),
     supabase.from('items').select('*').eq('user_id', req.userId).order('priority').order('created_at'),
     supabase.from('debts').select('*').eq('user_id', req.userId).eq('status', 'active').order('priority').order('created_at'),
-    supabase.from('goals').select('*').eq('user_id', req.userId).order('created_at'),
+    supabase.from('goals').select('*').eq('user_id', req.userId).order('id'),
     supabase.from('user_settings').select('*').eq('user_id', req.userId).single(),
   ]);
 
