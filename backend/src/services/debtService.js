@@ -56,17 +56,25 @@ export function distributeDebtPayments(debts, pool) {
   }));
   let remainingPool = pool;
 
-  // 1. Handle min_payment floors first for ALL debts regardless of priority
-  for (const debt of workingDebts) {
-    if (debt.min_payment > 0 && debt.remaining_balance > 0) {
-      const minAlloc = Math.min(debt.min_payment, debt.remaining_balance, remainingPool);
+  // 1. Handle min_payment floors by priority tiers, proportionally if short
+  const tiers = ['high', 'normal', 'low'];
+
+  for (const tier of tiers) {
+    if (remainingPool <= 0.001) break;
+    const tierDebts = workingDebts.filter(d => d.priority === tier && d.min_payment > 0 && d.remaining_balance > 0);
+    if (tierDebts.length === 0) continue;
+
+    const tierMinTotal = tierDebts.reduce((sum, d) => sum + Math.min(d.min_payment, d.remaining_balance), 0);
+    const scale = remainingPool >= tierMinTotal ? 1 : remainingPool / tierMinTotal;
+
+    for (const debt of tierDebts) {
+      const minAlloc = Math.min(debt.min_payment, debt.remaining_balance) * scale;
       allocations[debt.id] += minAlloc;
       remainingPool -= minAlloc;
     }
   }
 
   // 2. Distribute leftover pool by priority tiers
-  const tiers = ['high', 'normal', 'low'];
 
   for (const tier of tiers) {
     if (remainingPool <= 0.001) break;

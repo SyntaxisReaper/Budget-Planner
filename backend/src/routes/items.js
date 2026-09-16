@@ -24,6 +24,9 @@ router.post('/', async (req, res) => {
   if (!name || amount_needed == null || !priority) {
     return res.status(400).json({ error: 'name, amount_needed, and priority are required' });
   }
+  if (Number(amount_needed) <= 0) {
+    return res.status(400).json({ error: 'amount_needed must be greater than 0' });
+  }
   const validPriorities = ['essential', 'important', 'optional'];
   if (!validPriorities.includes(priority)) {
     return res.status(400).json({ error: `priority must be one of: ${validPriorities.join(', ')}` });
@@ -42,6 +45,9 @@ router.post('/', async (req, res) => {
 // PUT /api/items/:id
 router.put('/:id', async (req, res) => {
   const { name, amount_needed, priority, is_recurring, due_date, category } = req.body;
+  if (amount_needed != null && Number(amount_needed) <= 0) {
+    return res.status(400).json({ error: 'amount_needed must be greater than 0' });
+  }
   const { data, error } = await supabase
     .from('items')
     .update({ name, amount_needed, priority, is_recurring, due_date, category: category || 'General' })

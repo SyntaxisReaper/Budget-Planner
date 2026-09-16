@@ -49,8 +49,10 @@ export function runAllocator({ totalIncome, items, activeDebts, goals, leftoverP
   }
 
   // ─── Step 2: Debt payments
-  if (autoDebts.length > 0 && remaining > 0) {
-    const debtAllocations = distributeDebtPayments(autoDebts, remaining);
+  if (autoDebts.length > 0) {
+    const totalMinDebt = autoDebts.reduce((s, d) => s + Math.min(d.min_payment || 0, d.remaining_balance || 0), 0);
+    const pool = Math.max(0, Math.min(remaining, totalMinDebt));
+    const debtAllocations = distributeDebtPayments(autoDebts, pool);
     for (const debt of autoDebts) {
       const allocated = debtAllocations[debt.id] || 0;
       lineItems.push({ target_type: 'debt', target_id: debt.id, name: debt.name, allocated_amount: round2(allocated) });
@@ -89,26 +91,49 @@ export function runAllocator({ totalIncome, items, activeDebts, goals, leftoverP
 
   // ─── Step 4a: Important items
   const important = autoItems.filter((i) => i.priority === 'important');
-  for (const item of important) {
-    if (remaining <= 0) break;
-    const needed = Number(item.amount_needed);
-    const allocated = Math.min(needed, remaining);
-    lineItems.push({ target_type: 'item', target_id: item.id, name: item.name, priority: 'important', allocated_amount: round2(allocated) });
-    remaining -= allocated;
+  const totalImportantNeeded = important.reduce((s, i) => s + Number(i.amount_needed), 0);
+
+  if (totalImportantNeeded > 0) {
+    const scale = remaining <= 0 ? 0 : (remaining >= totalImportantNeeded ? 1 : remaining / totalImportantNeeded);
+    for (const item of important) {
+      const allocated = round2(Number(item.amount_needed) * scale);
+      lineItems.push({ target_type: 'item', target_id: item.id, name: item.name, priority: 'important', allocated_amount: allocated });
+      remaining -= allocated;
+    }
   }
 
   // ─── Step 4b: Optional items
   const optional = autoItems.filter((i) => i.priority === 'optional');
-  for (const item of optional) {
-    if (remaining <= 0) break;
-    const needed = Number(item.amount_needed);
-    const allocated = Math.min(needed, remaining);
-    lineItems.push({ target_type: 'item', target_id: item.id, name: item.name, priority: 'optional', allocated_amount: round2(allocated) });
-    remaining -= allocated;
+  const totalOptionalNeeded = optional.reduce((s, i) => s + Number(i.amount_needed), 0);
+
+  if (totalOptionalNeeded > 0) {
+    const scale = remaining <= 0 ? 0 : (remaining >= totalOptionalNeeded ? 1 : remaining / totalOptionalNeeded);
+    for (const item of optional) {
+      const allocated = round2(Number(item.amount_needed) * scale);
+      lineItems.push({ target_type: 'item', target_id: item.id, name: item.name, priority: 'optional', allocated_amount: allocated });
+      remaining -= allocated;
+    }
   }
 
   // ─── Step 5: Leftover
-  const leftover = round2(Math.max(0, remaining));
+  let leftover = round2(Math.max(0, remaining));
+
+  if (leftoverPreference === 'debt' && leftover > 0 && autoDebts.length > 0) {
+    const debtAllocations = distributeDebtPayments(autoDebts, leftover);
+    for (const debt of autoDebts) {
+      const extraAllocated = debtAllocations[debt.id] || 0;
+      if (extraAllocated > 0) {
+        const existing = lineItems.find(li => li.target_type === 'debt' && li.target_id === debt.id);
+        if (existing) {
+          existing.allocated_amount = round2(existing.allocated_amount + extraAllocated);
+        } else {
+          lineItems.push({ target_type: 'debt', target_id: debt.id, name: debt.name, allocated_amount: round2(extraAllocated) });
+        }
+      }
+    }
+    leftover = 0; // consumed
+  }
+
   const totalAllocated = round2(lineItems.reduce((s, li) => s + li.allocated_amount, 0));
   const totalSaved = leftoverPreference === 'savings' ? leftover : 0;
 

@@ -24,6 +24,12 @@ router.post('/', async (req, res) => {
   if (!name || principal == null) {
     return res.status(400).json({ error: 'name and principal are required' });
   }
+  if (Number(principal) <= 0) {
+    return res.status(400).json({ error: 'principal must be greater than 0' });
+  }
+  if (min_payment != null && Number(min_payment) < 0) {
+    return res.status(400).json({ error: 'min_payment cannot be negative' });
+  }
 
   const { data, error } = await supabase
     .from('debts')
@@ -48,6 +54,9 @@ router.post('/', async (req, res) => {
 // PUT /api/debts/:id
 router.put('/:id', async (req, res) => {
   const { name, interest_rate, min_payment, status, description, priority } = req.body;
+  if (min_payment != null && Number(min_payment) < 0) {
+    return res.status(400).json({ error: 'min_payment cannot be negative' });
+  }
   const { data, error } = await supabase
     .from('debts')
     .update({ name, interest_rate, min_payment, status, description, priority: priority ?? 'normal' })
@@ -78,6 +87,9 @@ router.post('/:id/payments', async (req, res) => {
   const { amount, date } = req.body;
   if (amount == null || !date) {
     return res.status(400).json({ error: 'amount and date are required' });
+  }
+  if (Number(amount) <= 0) {
+    return res.status(400).json({ error: 'amount must be greater than 0' });
   }
 
   // Verify debt belongs to user
