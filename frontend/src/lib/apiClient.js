@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { supabase } from './supabaseClient.js';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://budget-planner-f5qb.onrender.com/api';
 
 const apiClient = axios.create({ baseURL: BASE_URL });
 
