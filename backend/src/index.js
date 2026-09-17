@@ -18,7 +18,17 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-app.use(cors({ origin: FRONTEND_URL, credentials: true }));
+const allowedOrigins = [FRONTEND_URL, 'http://localhost', 'capacitor://localhost'];
+app.use(cors({ 
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }, 
+  credentials: true 
+}));
 app.use(express.json());
 
 // Health check
