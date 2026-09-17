@@ -1,5 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../lib/apiClient.js';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+
+const triggerHaptic = () => {
+  Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+};
 
 export function useAccounts() {
   const queryClient = useQueryClient();
@@ -7,12 +12,18 @@ export function useAccounts() {
 
   const create = useMutation({
     mutationFn: (data) => apiClient.post('/accounts', data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+    onSuccess: () => {
+      triggerHaptic();
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    }
   });
 
   const update = useMutation({
     mutationFn: ({ id, ...data }) => apiClient.put(`/accounts/${id}`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+    onSuccess: () => {
+      triggerHaptic();
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    }
   });
 
   const remove = useMutation({
@@ -23,6 +34,7 @@ export function useAccounts() {
   const transfer = useMutation({
     mutationFn: ({ from_account_id, ...data }) => apiClient.post(`/accounts/${from_account_id}/transfer`, data),
     onSuccess: () => {
+      triggerHaptic();
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -113,12 +125,18 @@ export function useDebts() {
 
   const create = useMutation({
     mutationFn: (data) => apiClient.post('/debts', data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['debts'] }),
+    onSuccess: () => {
+      triggerHaptic();
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+    }
   });
 
   const update = useMutation({
     mutationFn: ({ id, ...data }) => apiClient.put(`/debts/${id}`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['debts'] }),
+    onSuccess: () => {
+      triggerHaptic();
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+    }
   });
 
   const remove = useMutation({
@@ -135,12 +153,18 @@ export function useGoals() {
 
   const create = useMutation({
     mutationFn: (data) => apiClient.post('/goals', data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['goals'] }),
+    onSuccess: () => {
+      triggerHaptic();
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+    }
   });
 
   const update = useMutation({
     mutationFn: ({ id, ...data }) => apiClient.put(`/goals/${id}`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['goals'] }),
+    onSuccess: () => {
+      triggerHaptic();
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+    }
   });
 
   const remove = useMutation({
@@ -170,6 +194,7 @@ export function useTransactions(filters = {}) {
   const create = useMutation({
     mutationFn: (data) => apiClient.post('/transactions', data),
     onSuccess: () => {
+      triggerHaptic();
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -181,6 +206,7 @@ export function useTransactions(filters = {}) {
   const remove = useMutation({
     mutationFn: (id) => apiClient.delete(`/transactions/${id}`),
     onSuccess: () => {
+      triggerHaptic();
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });

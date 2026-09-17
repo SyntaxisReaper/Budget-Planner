@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { TableVirtuoso } from 'react-virtuoso';
 import { Plus, Filter, ArrowRightLeft } from 'lucide-react';
 import { useTransactions, useItems, useAccounts, useDebts, useGoals, useSettings } from '../hooks/useBudget.js';
 import { computeCycleBounds } from '../lib/dateUtils.js';
@@ -302,9 +303,10 @@ export default function Transactions() {
             <p>No transactions found for this period.</p>
           </div>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
+          <div className="table-wrap" style={{ height: 'calc(100vh - 380px)', minHeight: 400 }}>
+            <TableVirtuoso
+              data={filtered}
+              fixedHeaderContent={() => (
                 <tr>
                   <th>Date & Time</th>
                   <th>Account</th>
@@ -314,45 +316,43 @@ export default function Transactions() {
                   <th style={{ textAlign: 'right' }}>Amount</th>
                   <th></th>
                 </tr>
-              </thead>
-              <tbody ref={parent}>
-                {filtered.map((t) => (
-                  <tr key={t.id}>
-                    <td className="text-muted" style={{ whiteSpace: 'nowrap' }}>
-                      {new Date(t.occurred_at).toLocaleString(undefined, { 
-                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-                      })}
-                    </td>
-                    <td>{accountMap[t.account_id]?.name || '—'}</td>
-                    <td>{renderTarget(t)}</td>
-                    <td>
-                      <span className={`badge ${
-                        t.type === 'income' || t.type === 'transfer_in' ? 'badge-success' : 
-                        (t.type === 'expense' || t.type === 'transfer_out' ? 'badge-danger' : 'badge-important')
-                      }`}>
-                        {t.type.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="text-muted" style={{ fontSize: '0.8rem' }}>
-                      {t.note}
-                      {t.note && t.utr_id && ' · '}
-                      {t.utr_id && <span style={{ fontFamily: 'monospace' }}>UTR: {t.utr_id}</span>}
-                    </td>
-                    <td style={{ 
-                      textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap',
-                      color: (t.type === 'income' || t.type === 'transfer_in') ? 'var(--color-success)' : 'var(--color-text)' 
-                    }}>
-                      {(t.type === 'income' || t.type === 'transfer_in') ? '+' : '-'}{fmt.format(t.amount)}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button className="btn btn-icon btn-ghost btn-sm text-muted hover:text-danger" onClick={() => handleDelete(t.id)}>
-                        ×
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              )}
+              itemContent={(_index, t) => (
+                <>
+                  <td className="text-muted" style={{ whiteSpace: 'nowrap' }}>
+                    {new Date(t.occurred_at).toLocaleString(undefined, { 
+                      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                    })}
+                  </td>
+                  <td>{accountMap[t.account_id]?.name || '—'}</td>
+                  <td>{renderTarget(t)}</td>
+                  <td>
+                    <span className={`badge ${
+                      t.type === 'income' || t.type === 'transfer_in' ? 'badge-success' : 
+                      (t.type === 'expense' || t.type === 'transfer_out' ? 'badge-danger' : 'badge-important')
+                    }`}>
+                      {t.type.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="text-muted" style={{ fontSize: '0.8rem' }}>
+                    {t.note}
+                    {t.note && t.utr_id && ' · '}
+                    {t.utr_id && <span style={{ fontFamily: 'monospace' }}>UTR: {t.utr_id}</span>}
+                  </td>
+                  <td style={{ 
+                    textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap',
+                    color: (t.type === 'income' || t.type === 'transfer_in') ? 'var(--color-success)' : 'var(--color-text)' 
+                  }}>
+                    {(t.type === 'income' || t.type === 'transfer_in') ? '+' : '-'}{fmt.format(t.amount)}
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button className="btn btn-icon btn-ghost btn-sm text-muted hover:text-danger" onClick={() => handleDelete(t.id)}>
+                      ×
+                    </button>
+                  </td>
+                </>
+              )}
+            />
           </div>
         )}
       </div>
