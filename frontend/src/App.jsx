@@ -11,6 +11,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import Accounts from './pages/Accounts.jsx';
 import Transactions from './pages/Transactions.jsx';
 import Items from './pages/Items.jsx';
 import Debts from './pages/Debts.jsx';
@@ -46,6 +47,7 @@ function AnimatedRoutes() {
     <AnimatePresence mode="wait" initial={false}>
       <Routes location={location} key={location.pathname}>
         <Route path="/"             element={<PageWrapper><Dashboard /></PageWrapper>} />
+        <Route path="/accounts"     element={<PageWrapper><Accounts /></PageWrapper>} />
         <Route path="/transactions" element={<PageWrapper><Transactions /></PageWrapper>} />
         <Route path="/items"        element={<PageWrapper><Items /></PageWrapper>} />
         <Route path="/debts"        element={<PageWrapper><Debts /></PageWrapper>} />

@@ -1,161 +1,29 @@
 import { Router } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
-import { runAllocator } from '../services/allocator.js';
 import { computeCycleBounds } from '../utils/dateUtils.js';
 
 const router = Router();
 router.use(authenticate);
 
-// POST /api/budget/allocate
-router.post('/allocate', async (req, res) => {
-  const { month, leftover_preference, manual_allocations = {} } = req.body;
-  if (!month) return res.status(400).json({ error: 'month (YYYY-MM) is required' });
-  if (leftover_preference && !['savings', 'debt'].includes(leftover_preference)) {
-    return res.status(400).json({ error: 'leftover_preference must be savings or debt' });
-  }
-
-  const firstOfMonth = `${month}-01`;
-
-  // Gather data
-  const [incomeRes, itemsRes, debtsRes, goalsRes, settingsRes] = await Promise.all([
-    supabase.from('income_sources').select('*').eq('user_id', req.userId).order('created_at'),
-    supabase.from('items').select('*').eq('user_id', req.userId).order('priority').order('created_at'),
-    supabase.from('debts').select('*').eq('user_id', req.userId).eq('status', 'active').order('priority').order('created_at'),
-    supabase.from('goals').select('*').eq('user_id', req.userId).order('id'),
-    supabase.from('user_settings').select('*').eq('user_id', req.userId).single(),
-  ]);
-
-  if (incomeRes.error) throw incomeRes.error;
-  if (itemsRes.error) throw itemsRes.error;
-  if (debtsRes.error) throw debtsRes.error;
-  if (goalsRes.error) throw goalsRes.error;
-
-  // Compute total monthly income
-  let totalIncome = 0;
-  if (settingsRes.data && settingsRes.data.cycle_income > 0) {
-    totalIncome = Number(settingsRes.data.cycle_income);
-  } else {
-    totalIncome = incomeRes.data.reduce((sum, src) => {
-      let monthly = Number(src.amount);
-      if (src.frequency === 'weekly') monthly = monthly * 52 / 12;
-      else if (src.frequency === 'one-time') monthly = 0; // not counted in recurring budget
-      return sum + monthly;
-    }, 0);
-  }
-
-  // Run the allocator
-  const allocation = runAllocator({
-    totalIncome,
-    items: itemsRes.data,
-    activeDebts: debtsRes.data,
-    goals: goalsRes.data,
-    leftoverPreference: leftover_preference || 'savings',
-    month: firstOfMonth,
-    manualAllocations: manual_allocations,
-  });
-
-  // Upsert budget row
-  const { data: existingBudget } = await supabase
-    .from('budgets')
-    .select('id')
-    .eq('user_id', req.userId)
-    .eq('month', firstOfMonth)
-    .single();
-
-  let budgetId;
-  let spentMap = {};
-
-  if (existingBudget) {
-    await supabase
-      .from('budgets')
-      .update({
-        total_income: totalIncome,
-        total_allocated: allocation.totalAllocated,
-        total_saved: allocation.totalSaved,
-      })
-      .eq('id', existingBudget.id);
-    budgetId = existingBudget.id;
-
-    // We no longer preserve old allocations because we will dynamically sum them
-    // Delete old allocations
-    await supabase.from('budget_allocations').delete().eq('budget_id', budgetId);
-  } else {
-    const { data: newBudget, error: budgetErr } = await supabase
-      .from('budgets')
-      .insert({
-        user_id: req.userId,
-        month: firstOfMonth,
-        total_income: totalIncome,
-        total_allocated: allocation.totalAllocated,
-        total_saved: allocation.totalSaved,
-      })
-      .select()
-      .single();
-
-    if (budgetErr) throw budgetErr;
-    budgetId = newBudget.id;
-  }
-
-  // Calculate live spent_amount from transactions inside this cycle
-  const { start: cycleStart, end: cycleEnd } = computeCycleBounds(month, settingsRes.data);
-  const { data: txns } = await supabase
-    .from('transactions')
-    .select('item_id, amount')
-    .eq('user_id', req.userId)
-    .eq('type', 'expense')
-    .gte('date', cycleStart)
-    .lte('date', cycleEnd);
-
-  if (txns) {
-    txns.forEach(t => {
-      if (t.item_id) {
-        const key = `item_${t.item_id}`;
-        spentMap[key] = (spentMap[key] || 0) + Number(t.amount);
-      }
-    });
-  }
-
-  // Insert allocations
-  if (allocation.lineItems.length > 0) {
-    const rows = allocation.lineItems.map((li) => ({
-      budget_id: budgetId,
-      target_type: li.target_type,
-      target_id: li.target_id,
-      allocated_amount: li.allocated_amount,
-      spent_amount: spentMap[`${li.target_type}_${li.target_id}`] || 0,
-      is_manual: li.is_manual || false,
-    }));
-
-    const { error: allocErr } = await supabase.from('budget_allocations').insert(rows);
-    if (allocErr) throw allocErr;
-  }
-
-  res.status(201).json({
-    budget_id: budgetId,
-    month: firstOfMonth,
-    total_income: totalIncome,
-    total_allocated: allocation.totalAllocated,
-    total_saved: allocation.totalSaved,
-    leftover: allocation.leftover,
-    line_items: allocation.lineItems,
-    at_risk_goals: allocation.atRiskGoals,
-  });
-});
-
 // GET /api/budget/:month
 router.get('/:month', async (req, res) => {
   const firstOfMonth = `${req.params.month}-01`;
 
-  const { data: budget, error } = await supabase
+  // Fetch the budget
+  let { data: budget, error } = await supabase
     .from('budgets')
     .select('*')
     .eq('user_id', req.userId)
     .eq('month', firstOfMonth)
     .single();
 
-  if (error || !budget) return res.status(404).json({ error: 'Budget not found for this month' });
+  if (error || !budget) {
+    // Return empty state if no budget exists
+    return res.json({ month: firstOfMonth, allocations: [] });
+  }
 
+  // Fetch allocations
   const { data: allocations, error: allocErr } = await supabase
     .from('budget_allocations')
     .select('*')
@@ -164,25 +32,157 @@ router.get('/:month', async (req, res) => {
 
   if (allocErr) throw allocErr;
 
-  // For any rows still missing a name (old data), resolve from source tables
-  const missing = allocations.filter(a => !a.name);
-  if (missing.length > 0) {
-    const [itemIds, debtIds, goalIds] = [
-      missing.filter(a => a.target_type === 'item').map(a => a.target_id),
-      missing.filter(a => a.target_type === 'debt').map(a => a.target_id),
-      missing.filter(a => a.target_type === 'goal').map(a => a.target_id),
-    ];
-    const [itemsR, debtsR, goalsR] = await Promise.all([
-      itemIds.length ? supabase.from('items').select('id,name').in('id', itemIds) : { data: [] },
-      debtIds.length ? supabase.from('debts').select('id,name').in('id', debtIds) : { data: [] },
-      goalIds.length ? supabase.from('goals').select('id,name').in('id', goalIds) : { data: [] },
-    ]);
-    const nameMap = {};
-    [...(itemsR.data||[]), ...(debtsR.data||[]), ...(goalsR.data||[])].forEach(r => { nameMap[r.id] = r.name; });
-    allocations.forEach(a => { if (!a.name) a.name = nameMap[a.target_id] || a.target_id; });
+  // Compute live spent_amount for each allocation by summing transactions in the cycle
+  const { data: settings } = await supabase
+    .from('user_settings')
+    .select('cycle_start_date, cycle_days')
+    .eq('user_id', req.userId)
+    .single();
+
+  const { start, end } = computeCycleBounds(req.params.month, settings);
+
+  const { data: txns } = await supabase
+    .from('transactions')
+    .select('item_id, debt_id, goal_id, type, amount')
+    .eq('user_id', req.userId)
+    .gte('occurred_at', start)
+    .lte('occurred_at', end);
+
+  const spentMap = {};
+  if (txns) {
+    txns.forEach(t => {
+      if (t.type === 'expense' && t.item_id) {
+        spentMap[`item_${t.item_id}`] = (spentMap[`item_${t.item_id}`] || 0) + Number(t.amount);
+      } else if (t.type === 'debt_payment' && t.debt_id) {
+        spentMap[`debt_${t.debt_id}`] = (spentMap[`debt_${t.debt_id}`] || 0) + Number(t.amount);
+      } else if (t.type === 'goal_contribution' && t.goal_id) {
+        spentMap[`goal_${t.goal_id}`] = (spentMap[`goal_${t.goal_id}`] || 0) + Number(t.amount);
+      }
+    });
   }
 
+  // Enrich with names and dynamic spent amounts
+  const [itemIds, debtIds, goalIds] = [
+    allocations.filter(a => a.target_type === 'item').map(a => a.target_id),
+    allocations.filter(a => a.target_type === 'debt').map(a => a.target_id),
+    allocations.filter(a => a.target_type === 'goal').map(a => a.target_id),
+  ];
+  const [itemsR, debtsR, goalsR] = await Promise.all([
+    itemIds.length ? supabase.from('items').select('id,name').in('id', itemIds) : { data: [] },
+    debtIds.length ? supabase.from('debts').select('id,name').in('id', debtIds) : { data: [] },
+    goalIds.length ? supabase.from('goals').select('id,name').in('id', goalIds) : { data: [] },
+  ]);
+  
+  const nameMap = {};
+  [...(itemsR.data||[]), ...(debtsR.data||[]), ...(goalsR.data||[])].forEach(r => { nameMap[r.id] = r.name; });
+  
+  allocations.forEach(a => { 
+    a.name = nameMap[a.target_id] || a.target_id;
+    a.spent_amount = spentMap[`${a.target_type}_${a.target_id}`] || 0;
+  });
+
   res.json({ ...budget, allocations });
+});
+
+// PUT /api/budget/:month/allocations/:target_type/:target_id
+router.put('/:month/allocations/:target_type/:target_id', async (req, res) => {
+  const { month, target_type, target_id } = req.params;
+  const { allocated_amount } = req.body;
+  const firstOfMonth = `${month}-01`;
+
+  if (!['item', 'debt', 'goal'].includes(target_type)) {
+    return res.status(400).json({ error: 'Invalid target_type' });
+  }
+
+  if (allocated_amount == null || Number(allocated_amount) < 0) {
+    return res.status(400).json({ error: 'allocated_amount is required and must be non-negative' });
+  }
+
+  // Ensure budget exists
+  let { data: budget } = await supabase
+    .from('budgets')
+    .select('id')
+    .eq('user_id', req.userId)
+    .eq('month', firstOfMonth)
+    .single();
+
+  if (!budget) {
+    // Create skeleton budget if it doesn't exist
+    const { data: newBudget, error: budgetErr } = await supabase
+      .from('budgets')
+      .insert({
+        user_id: req.userId,
+        month: firstOfMonth,
+        total_income: 0,
+        total_allocated: 0,
+        total_saved: 0,
+      })
+      .select()
+      .single();
+    if (budgetErr) throw budgetErr;
+    budget = newBudget;
+  }
+
+  // Check if allocation exists
+  const { data: existingAlloc } = await supabase
+    .from('budget_allocations')
+    .select('id')
+    .eq('budget_id', budget.id)
+    .eq('target_type', target_type)
+    .eq('target_id', target_id)
+    .single();
+
+  let allocResult;
+  if (existingAlloc) {
+    const { data, error } = await supabase
+      .from('budget_allocations')
+      .update({ allocated_amount })
+      .eq('id', existingAlloc.id)
+      .select()
+      .single();
+    if (error) throw error;
+    allocResult = data;
+  } else {
+    const { data, error } = await supabase
+      .from('budget_allocations')
+      .insert({
+        budget_id: budget.id,
+        target_type,
+        target_id,
+        allocated_amount
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    allocResult = data;
+  }
+
+  res.json(allocResult);
+});
+
+// DELETE /api/budget/:month/allocations/:target_type/:target_id
+router.delete('/:month/allocations/:target_type/:target_id', async (req, res) => {
+  const { month, target_type, target_id } = req.params;
+  const firstOfMonth = `${month}-01`;
+
+  const { data: budget } = await supabase
+    .from('budgets')
+    .select('id')
+    .eq('user_id', req.userId)
+    .eq('month', firstOfMonth)
+    .single();
+
+  if (!budget) return res.status(404).json({ error: 'Budget not found' });
+
+  const { error } = await supabase
+    .from('budget_allocations')
+    .delete()
+    .eq('budget_id', budget.id)
+    .eq('target_type', target_type)
+    .eq('target_id', target_id);
+
+  if (error) throw error;
+  res.status(204).send();
 });
 
 export default router;

@@ -1,6 +1,37 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../lib/apiClient.js';
 
+export function useAccounts() {
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['accounts'], queryFn: () => apiClient.get('/accounts') });
+
+  const create = useMutation({
+    mutationFn: (data) => apiClient.post('/accounts', data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+  });
+
+  const update = useMutation({
+    mutationFn: ({ id, ...data }) => apiClient.put(`/accounts/${id}`, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id) => apiClient.delete(`/accounts/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+  });
+
+  const transfer = useMutation({
+    mutationFn: ({ from_account_id, ...data }) => apiClient.post(`/accounts/${from_account_id}/transfer`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+
+  return { query, create, update, remove, transfer };
+}
+
 export function useBudget(month) {
   const queryClient = useQueryClient();
   const monthKey = month || new Date().toISOString().substring(0, 7);
@@ -12,14 +43,24 @@ export function useBudget(month) {
   });
 
   const allocateMutation = useMutation({
-    mutationFn: ({ month: m, leftover_preference, manual_allocations }) =>
-      apiClient.post('/budget/allocate', { month: m || monthKey, leftover_preference, manual_allocations }),
+    mutationFn: ({ target_type, target_id, allocated_amount }) =>
+      apiClient.put(`/budget/${monthKey}/allocations/${target_type}/${target_id}`, { allocated_amount }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['budget'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 
-  return { budgetQuery, allocateMutation };
+  const removeAllocation = useMutation({
+    mutationFn: ({ target_type, target_id }) =>
+      apiClient.delete(`/budget/${monthKey}/allocations/${target_type}/${target_id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budget'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+
+  return { budgetQuery, allocateMutation, removeAllocation };
 }
 
 export function useIncome() {
@@ -85,15 +126,7 @@ export function useDebts() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['debts'] }),
   });
 
-  const logPayment = useMutation({
-    mutationFn: ({ id, ...data }) => apiClient.post(`/debts/${id}/payments`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['debts'] });
-      queryClient.invalidateQueries({ queryKey: ['settings'] });
-    },
-  });
-
-  return { query, create, update, remove, logPayment };
+  return { query, create, update, remove };
 }
 
 export function useGoals() {
@@ -118,35 +151,63 @@ export function useGoals() {
   return { query, create, update, remove };
 }
 
-export function useTransactions(month) {
+export function useTransactions(filters = {}) {
   const queryClient = useQueryClient();
+  
+  const queryParams = new URLSearchParams();
+  Object.entries(filters).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') queryParams.append(k, v);
+  });
+  
+  const queryStr = queryParams.toString();
+  const endpoint = `/transactions${queryStr ? '?' + queryStr : ''}`;
+
   const query = useQuery({
-    queryKey: ['transactions', month],
-    queryFn: () => apiClient.get(`/transactions${month ? `?month=${month}` : ''}`),
+    queryKey: ['transactions', filters],
+    queryFn: () => apiClient.get(endpoint),
   });
 
   const create = useMutation({
     mutationFn: (data) => apiClient.post('/transactions', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['settings'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
     },
   });
 
-  return { query, create };
+  const remove = useMutation({
+    mutationFn: (id) => apiClient.delete(`/transactions/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+    }
+  });
+
+  return { query, create, remove };
+}
+
+export function useDashboard(month) {
+  const monthKey = month || new Date().toISOString().substring(0, 7);
+  const summary = useQuery({
+    queryKey: ['dashboard', monthKey],
+    queryFn: () => apiClient.get(`/dashboard/summary?month=${monthKey}`),
+  });
+  return { summary };
 }
 
 export function useAnalytics(month) {
   const monthKey = month || new Date().toISOString().substring(0, 7);
-  const summary = useQuery({
+  const trends = useQuery({
     queryKey: ['analytics', monthKey],
-    queryFn: () => apiClient.get(`/analytics/summary?month=${monthKey}`),
+    queryFn: () => apiClient.get(`/analytics/trends?month=${monthKey}`),
   });
-  const debtProjection = useQuery({
-    queryKey: ['analytics', 'debt-projection'],
-    queryFn: () => apiClient.get('/analytics/debt-projection'),
-  });
-  return { summary, debtProjection };
+  return { trends };
 }
 
 export function useSettings() {

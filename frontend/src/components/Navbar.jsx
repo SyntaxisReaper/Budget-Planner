@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, ReceiptText, ShoppingCart,
-  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Menu
+  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Menu, Landmark
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { slideInLeft } from '../lib/motion.js';
 
 const links = [
   { to: '/',             icon: LayoutDashboard, label: 'Dashboard'    },
+  { to: '/accounts',     icon: Landmark,        label: 'Accounts'     },
   { to: '/transactions', icon: ReceiptText,     label: 'Transactions' },
   { to: '/items',        icon: ShoppingCart,    label: 'Items'        },
   { to: '/debts',        icon: CreditCard,      label: 'Debts'        },

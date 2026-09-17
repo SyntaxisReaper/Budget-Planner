@@ -1,16 +1,18 @@
-import { TrendingUp, TrendingDown, DollarSign, AlertTriangle } from 'lucide-react';
-import { useBudget, useAnalytics, useSettings, useTransactions, useGoals } from '../hooks/useBudget.js';
+import { TrendingUp, TrendingDown, DollarSign, Landmark, AlertTriangle } from 'lucide-react';
+import { useDashboard, useAnalytics, useSettings, useTransactions } from '../hooks/useBudget.js';
 import { computeCycleBounds } from '../lib/dateUtils.js';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { staggerContainer, itemVariants, fadeUp } from '../lib/motion.js';
 import CashFlowSankey from '../components/CashFlowSankey.jsx';
 import HistoryChart from '../components/HistoryChart.jsx';
+import { useMemo } from 'react';
+import { useAccounts, useItems, useDebts, useGoals } from '../hooks/useBudget.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 const currentMonth = new Date().toISOString().substring(0, 7);
 
-function StatCard({ icon, iconBg, iconColor, label, value, valueClass, settings }) {
+function StatCard({ icon, iconBg, iconColor, label, value, valueClass }) {
   return (
     <motion.div className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
       <div className="stat-icon" style={{ background: iconBg }}>
@@ -18,11 +20,6 @@ function StatCard({ icon, iconBg, iconColor, label, value, valueClass, settings 
       </div>
       <div className="stat-label flex items-center justify-between">
         <span>{label}</span>
-        {label === 'Monthly Income' && settings && (settings.data?.cycle_income > 0 || settings.cycle_income > 0) && (
-          <span className="text-xs text-muted" style={{ fontWeight: 400 }}>
-            Planned: {fmt.format(settings.data?.cycle_income || settings.cycle_income)}
-          </span>
-        )}
       </div>
       <motion.div className={`stat-value ${valueClass}`} variants={fadeUp}>
         {value}
@@ -32,21 +29,36 @@ function StatCard({ icon, iconBg, iconColor, label, value, valueClass, settings 
 }
 
 export default function Dashboard() {
-  const { summary } = useAnalytics(currentMonth);
-  const { query: txnQuery } = useTransactions(currentMonth);
-  const { query: goalsQuery } = useGoals();
+  const { summary } = useDashboard(currentMonth);
+  const { trends } = useAnalytics(currentMonth);
   const { data: settings } = useSettings();
-
-  const s = summary.data;
-  const transactions = txnQuery.data || [];
-  const goals = goalsQuery.data || [];
-  const atRiskGoals = goals.filter((g) => g.at_risk);
-
   const { start: cycleStart, end: cycleEnd } = computeCycleBounds(currentMonth, settings?.data || settings);
+  const { query: txnQuery } = useTransactions({ from: cycleStart, to: cycleEnd });
+  
+  const { query: accountsQuery } = useAccounts();
+  const { query: itemsQuery } = useItems();
+  const { query: debtsQuery } = useDebts();
+  const { query: goalsQuery } = useGoals();
+  
+  const s = summary.data;
+  const t = trends.data;
+  const transactions = txnQuery.data || [];
+
+  const accountMap = useMemo(() => Object.fromEntries((accountsQuery.data || []).map(a => [a.id, a])), [accountsQuery.data]);
+  const itemMap = useMemo(() => Object.fromEntries((itemsQuery.data || []).map(i => [i.id, i])), [itemsQuery.data]);
+  const debtMap = useMemo(() => Object.fromEntries((debtsQuery.data || []).map(d => [d.id, d])), [debtsQuery.data]);
+  const goalMap = useMemo(() => Object.fromEntries((goalsQuery.data || []).map(g => [g.id, g])), [goalsQuery.data]);
 
   const recentTxns = [...transactions]
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .sort((a, b) => new Date(b.occurred_at) - new Date(a.occurred_at))
     .slice(0, 6);
+
+  function renderTarget(txn) {
+    if (txn.type === 'expense' && txn.item_id) return itemMap[txn.item_id]?.name || 'Item';
+    if (txn.type === 'debt_payment' && txn.debt_id) return debtMap[txn.debt_id]?.name || 'Debt';
+    if (txn.type === 'goal_contribution' && txn.goal_id) return goalMap[txn.goal_id]?.name || 'Goal';
+    return <span className="text-muted">—</span>;
+  }
 
   return (
     <div className="page">
@@ -69,87 +81,73 @@ export default function Dashboard() {
         animate="visible"
       >
         <StatCard
-          icon={(c) => <DollarSign size={18} color={c} />}
+          icon={(c) => <Landmark size={18} color={c} />}
           iconBg="rgba(237,237,237,0.08)" iconColor="var(--color-text)"
-          label="Monthly Income" value={s ? fmt.format(s.total_income) : '—'} valueClass="primary"
+          label="Total Balance" value={s ? fmt.format(s.total_balance) : '—'} valueClass=""
+        />
+        <StatCard
+          icon={(c) => <DollarSign size={18} color={c} />}
+          iconBg="rgba(52,211,153,0.1)" iconColor="var(--color-success)"
+          label="Cycle Income" value={s ? fmt.format(s.cycle_income) : '—'} valueClass="positive"
         />
         <StatCard
           icon={(c) => <TrendingDown size={18} color={c} />}
           iconBg="rgba(239,68,68,0.1)" iconColor="var(--color-danger)"
-          label="Expenses" value={s ? fmt.format(s.total_expenses) : '—'} valueClass="negative"
-        />
-        <StatCard
-          icon={(c) => <TrendingUp size={18} color={c} />}
-          iconBg="rgba(52,211,153,0.1)" iconColor="var(--color-success)"
-          label="Net Savings" value={s ? fmt.format(s.net_savings) : '—'}
-          valueClass={s && s.net_savings >= 0 ? 'positive' : 'negative'}
+          label="Cycle Expenses" value={s ? fmt.format(s.cycle_expense) : '—'} valueClass="negative"
         />
         <StatCard
           icon={(c) => <TrendingUp size={18} color={c} />}
           iconBg="rgba(99,179,237,0.1)" iconColor="hsl(205,75%,65%)"
-          label="Savings Rate" value={s ? `${s.savings_rate}%` : '—'}
-          valueClass={s && s.savings_rate >= 0 ? 'positive' : 'negative'}
+          label="Net Savings" value={s ? fmt.format(s.net_savings) : '—'}
+          valueClass={s && s.net_savings >= 0 ? 'positive' : 'negative'}
         />
       </motion.div>
 
-      {/* Cash Flow Visual */}
-      {s?.sankey && s.sankey.links.length > 0 && (
-        <motion.div className="card mb-6" variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.1 }}>
-          <div className="section-header">
-            <div className="section-title">💸 Cash Flow Map</div>
-          </div>
-          <CashFlowSankey data={s.sankey} />
-        </motion.div>
-      )}
-
       {/* 6-Month History Visual */}
-      {s?.history && s.history.length > 0 && (
+      {t?.history && t.history.length > 0 && (
         <motion.div className="card mb-6" variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.15 }}>
           <div className="section-header">
             <div className="section-title">📊 6-Month Trend</div>
           </div>
-          <HistoryChart data={s.history} />
+          <HistoryChart data={t.history} />
         </motion.div>
       )}
 
       <motion.div className="grid-2" variants={staggerContainer} initial="hidden" animate="visible">
-        {/* Goals at risk */}
+        {/* Goals Progress */}
         <motion.div className="card" variants={itemVariants}>
           <div className="section-header">
             <div className="section-title">
-              {atRiskGoals.length > 0 ? (
-                <span className="flex items-center gap-2" style={{ color: 'var(--color-warning)' }}>
-                  <AlertTriangle size={16} /> Goals At Risk
-                </span>
-              ) : '🎯 Goals'}
+              🎯 Goals Progress
             </div>
             <Link to="/goals" className="btn btn-ghost btn-sm">View All</Link>
           </div>
 
-          {atRiskGoals.length > 0 ? (
+          {s?.goals && s.goals.length > 0 ? (
             <motion.div className="flex flex-col gap-3" variants={staggerContainer} initial="hidden" animate="visible">
-              {atRiskGoals.map((g) => (
-                <motion.div
-                  key={g.id}
-                  variants={itemVariants}
-                  className="flex items-center justify-between"
-                  style={{ padding: 'var(--space-3)', background: 'rgba(245,158,11,0.06)', borderRadius: 'var(--radius)', border: '1px solid rgba(245,158,11,0.15)' }}
-                >
-                  <div>
-                    <div className="font-semibold text-sm">{g.name}</div>
-                    <div className="text-xs text-muted">Needs {fmt.format(g.monthly_needed)}/mo</div>
-                  </div>
-                  <span className="badge badge-danger">At Risk</span>
-                </motion.div>
-              ))}
+              {s.goals.slice(0, 4).map((g) => {
+                const pct = Math.min(100, (g.current_amount / g.target_amount) * 100);
+                return (
+                  <motion.div
+                    key={g.id}
+                    variants={itemVariants}
+                    className="flex flex-col"
+                    style={{ padding: 'var(--space-3)', background: 'var(--color-surface-2)', borderRadius: 'var(--radius)' }}
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="font-semibold text-sm">{g.name}</div>
+                      <div className="text-xs text-muted">{pct.toFixed(0)}%</div>
+                    </div>
+                    <div className="progress-bar">
+                      <div className="progress-fill" style={{ width: `${pct}%`, background: 'var(--color-primary)' }} />
+                    </div>
+                  </motion.div>
+                );
+              })}
             </motion.div>
           ) : (
             <div className="text-sm text-muted">
-              {goals.length === 0 ? (
-                <span>No goals yet. <Link to="/goals" style={{ color: 'var(--color-primary)' }}>Add one →</Link></span>
-              ) : (
-                <span className="text-success">✓ All goals on track</span>
-              )}
+              <span>No goals yet. <Link to="/goals" style={{ color: 'var(--color-primary)' }}>Add one →</Link></span>
             </div>
           )}
         </motion.div>
@@ -161,9 +159,9 @@ export default function Dashboard() {
             <Link to="/analytics" className="btn btn-ghost btn-sm">Analytics</Link>
           </div>
 
-          {s?.category_trends?.filter((c) => c.flagged).length > 0 ? (
+          {t?.category_trends?.filter((c) => c.flagged).length > 0 ? (
             <motion.div className="flex flex-col gap-3" variants={staggerContainer} initial="hidden" animate="visible">
-              {s.category_trends.filter((c) => c.flagged).slice(0, 4).map((c) => (
+              {t.category_trends.filter((c) => c.flagged).slice(0, 4).map((c) => (
                 <motion.div key={c.item_id} className="flex items-center justify-between" variants={itemVariants}>
                   <span className="text-sm">{c.name}</span>
                   <span className={`badge ${c.deviation_pct > 0 ? 'badge-danger' : 'badge-success'}`}>
@@ -192,24 +190,33 @@ export default function Dashboard() {
             <table>
               <thead>
                 <tr>
-                  <th>Date</th><th>Item</th><th>Note</th><th>Type</th>
+                  <th>Date</th><th>Account</th><th>Target</th><th>Type</th>
                   <th style={{ textAlign: 'right' }}>Amount</th>
                 </tr>
               </thead>
               <tbody>
-                {recentTxns.map((t, i) => (
+                {recentTxns.map((txn, i) => (
                   <motion.tr
-                    key={t.id}
+                    key={txn.id}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.35 + i * 0.05, duration: 0.25, ease: 'easeOut' }}
                   >
-                    <td className="text-muted">{new Date(t.date).toLocaleDateString()}</td>
-                    <td>{t.items?.name || '—'}</td>
-                    <td className="text-muted">{t.note || '—'}</td>
-                    <td><span className={`badge ${t.type === 'income' ? 'badge-success' : 'badge-danger'}`}>{t.type}</span></td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, color: t.type === 'income' ? 'var(--color-success)' : 'var(--color-text)' }}>
-                      {t.type === 'income' ? '+' : '-'}{fmt.format(t.amount)}
+                    <td className="text-muted">
+                      {new Date(txn.occurred_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </td>
+                    <td>{accountMap[txn.account_id]?.name || '—'}</td>
+                    <td>{renderTarget(txn)}</td>
+                    <td>
+                      <span className={`badge ${
+                        txn.type === 'income' || txn.type === 'transfer_in' ? 'badge-success' : 
+                        (txn.type === 'expense' || txn.type === 'transfer_out' ? 'badge-danger' : 'badge-important')
+                      }`}>
+                        {txn.type.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: 600, color: (txn.type === 'income' || txn.type === 'transfer_in') ? 'var(--color-success)' : 'var(--color-text)' }}>
+                      {(txn.type === 'income' || txn.type === 'transfer_in') ? '+' : '-'}{fmt.format(txn.amount)}
                     </td>
                   </motion.tr>
                 ))}

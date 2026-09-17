@@ -57,10 +57,10 @@ router.post('/', async (req, res) => {
 
 // PUT /api/goals/:id
 router.put('/:id', async (req, res) => {
-  const { name, target_amount, current_amount, target_date } = req.body;
+  const { name, target_amount, target_date } = req.body;
   const { data, error } = await supabase
     .from('goals')
-    .update({ name, target_amount, current_amount, target_date })
+    .update({ name, target_amount, target_date })
     .eq('id', req.params.id)
     .eq('user_id', req.userId)
     .select()
@@ -81,6 +81,20 @@ router.delete('/:id', async (req, res) => {
 
   if (error) throw error;
   res.status(204).send();
+});
+
+// GET /api/goals/:id/contributions
+router.get('/:id/contributions', async (req, res) => {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*, accounts(name, type)')
+    .eq('goal_id', req.params.id)
+    .eq('type', 'goal_contribution')
+    .eq('user_id', req.userId)
+    .order('occurred_at', { ascending: false });
+
+  if (error) throw error;
+  res.json(data);
 });
 
 export default router;
