@@ -5,12 +5,12 @@
 
 // ─── Page / Container ────────────────────────────────────────────────────────
 export const pageVariants = {
-  hidden:  { opacity: 0, y: 16 },
+  hidden:  { opacity: 0, x: 30 },
   visible: {
-    opacity: 1, y: 0,
+    opacity: 1, x: 0,
     transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94], when: 'beforeChildren', staggerChildren: 0.07 }
   },
-  exit:    { opacity: 0, y: -10, transition: { duration: 0.2, ease: 'easeIn' } },
+  exit:    { opacity: 0, x: -30, transition: { duration: 0.2, ease: 'easeIn' } },
 };
 
 // ─── Individual items (cards, rows, etc.) ────────────────────────────────────

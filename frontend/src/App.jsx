@@ -1,7 +1,9 @@
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence, motion } from 'framer-motion';
+import { SplashScreen } from '@capacitor/splash-screen';
 
 import { useSupabaseAuth } from './hooks/useSupabaseAuth.js';
 import { useVersionCheck } from './hooks/useVersionCheck.js';
@@ -10,16 +12,18 @@ import AuthGuard from './components/AuthGuard.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import Accounts from './pages/Accounts.jsx';
-import Transactions from './pages/Transactions.jsx';
-import Items from './pages/Items.jsx';
-import Debts from './pages/Debts.jsx';
-import Goals from './pages/Goals.jsx';
-import BudgetPlanner from './pages/BudgetPlanner.jsx';
-import Analytics from './pages/Analytics.jsx';
-import Settings from './pages/Settings.jsx';
 import { pageVariants } from './lib/motion.js';
+
+// Lazy loaded routes
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
+const Accounts = lazy(() => import('./pages/Accounts.jsx'));
+const Transactions = lazy(() => import('./pages/Transactions.jsx'));
+const Items = lazy(() => import('./pages/Items.jsx'));
+const Debts = lazy(() => import('./pages/Debts.jsx'));
+const Goals = lazy(() => import('./pages/Goals.jsx'));
+const BudgetPlanner = lazy(() => import('./pages/BudgetPlanner.jsx'));
+const Analytics = lazy(() => import('./pages/Analytics.jsx'));
+const Settings = lazy(() => import('./pages/Settings.jsx'));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -35,7 +39,17 @@ function PageWrapper({ children }) {
       exit="exit"
       style={{ minHeight: '100%' }}
     >
-      {children}
+      <Suspense fallback={
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 80px)' }}>
+          <motion.div
+            animate={{ scale: [0.9, 1.1, 0.9], opacity: [0.5, 1, 0.5] }}
+            transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+            style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-primary)' }}
+          />
+        </div>
+      }>
+        {children}
+      </Suspense>
     </motion.div>
   );
 }
@@ -66,6 +80,12 @@ function AppShell() {
   
   // Start the background polling for Vercel updates
   useVersionCheck();
+
+  useEffect(() => {
+    if (!loading) {
+      SplashScreen.hide().catch(() => {});
+    }
+  }, [loading]);
 
   if (loading) {
     return (
