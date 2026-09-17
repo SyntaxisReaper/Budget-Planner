@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, Wallet, Landmark } from 'lucide-react';
-import { useAccounts } from '../hooks/useBudget.js';
+import { useAccounts, useTransactions } from '../hooks/useBudget.js';
 import toast from 'react-hot-toast';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -78,9 +78,67 @@ function AccountModal({ initial, onClose, onSave }) {
   );
 }
 
+function SetBalanceModal({ account, onClose, onSave }) {
+  const [newBalance, setNewBalance] = useState(account.current_balance);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const difference = parseFloat(newBalance) - parseFloat(account.current_balance);
+      if (difference === 0) {
+        onClose();
+        return;
+      }
+      
+      await onSave({
+        account_id: account.id,
+        type: difference > 0 ? 'income' : 'expense',
+        amount: Math.abs(difference),
+        note: 'Balance Adjustment',
+        occurred_at: new Date().toISOString()
+      });
+      
+      toast.success('Balance updated successfully!');
+      onClose();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <motion.div className="modal-overlay" variants={backdropVariants} initial="hidden" animate="visible" exit="exit" onClick={onClose}>
+      <motion.div className="modal" variants={modalVariants} initial="hidden" animate="visible" exit="exit" onClick={(e) => e.stopPropagation()}>
+        <h2 className="modal-title">⚖️ Set Balance</h2>
+        <p className="text-sm text-muted mb-4">
+          This will automatically create a true-up transaction (income or expense) to adjust your account balance to the specified amount.
+        </p>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="form-group">
+            <label className="label">New Balance (₹)</label>
+            <input type="number" className="input" step="0.01" required
+              value={newBalance} onChange={(e) => setNewBalance(e.target.value)} autoFocus />
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? <span className="spinner" /> : 'Set Balance'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function Accounts() {
   const { query, create, update, remove } = useAccounts();
+  const { create: createTxn } = useTransactions({});
   const [modal, setModal] = useState(null); // null | 'add' | account object
+  const [balanceModal, setBalanceModal] = useState(null); // account object for balance editing
   const [parent] = useAutoAnimate();
 
   const accounts = query.data || [];
@@ -142,17 +200,24 @@ export default function Accounts() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button className="btn btn-icon btn-ghost btn-sm" onClick={() => setModal(acc)}>
+                  <button className="btn btn-icon btn-ghost btn-sm" onClick={() => setModal(acc)} title="Edit Account">
                     <Pencil size={14} />
                   </button>
-                  <button className="btn btn-icon btn-danger btn-sm" onClick={() => handleDelete(acc.id)}>
+                  <button className="btn btn-icon btn-danger btn-sm" onClick={() => handleDelete(acc.id)} title="Delete Account">
                     <Trash2 size={14} />
                   </button>
                 </div>
               </div>
               
-              <div style={{ padding: 'var(--space-4)', background: 'var(--color-bg)', borderRadius: 'var(--radius)', border: '1px solid var(--color-border)' }}>
-                <div className="text-xs text-muted mb-1">Current Balance</div>
+              <div 
+                style={{ padding: 'var(--space-4)', background: 'var(--color-bg)', borderRadius: 'var(--radius)', border: '1px solid var(--color-border)', cursor: 'pointer' }}
+                onClick={() => setBalanceModal(acc)}
+                title="Click to adjust balance"
+              >
+                <div className="flex justify-between items-center mb-1">
+                  <div className="text-xs text-muted">Current Balance</div>
+                  <div className="text-xs text-primary font-medium hover:underline">Edit Balance</div>
+                </div>
                 <div className="font-bold text-xl" style={{ color: acc.current_balance < 0 ? 'var(--color-danger)' : 'var(--color-text)' }}>
                   {fmt.format(acc.current_balance)}
                 </div>
@@ -168,6 +233,13 @@ export default function Accounts() {
             initial={modal === 'add' ? null : modal}
             onClose={() => setModal(null)}
             onSave={handleSave}
+          />
+        )}
+        {balanceModal && (
+          <SetBalanceModal 
+            account={balanceModal} 
+            onClose={() => setBalanceModal(null)} 
+            onSave={createTxn.mutateAsync} 
           />
         )}
       </AnimatePresence>
