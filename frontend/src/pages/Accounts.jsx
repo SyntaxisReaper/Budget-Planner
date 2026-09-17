@@ -86,18 +86,15 @@ function SetBalanceModal({ account, onClose, onSave }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const difference = parseFloat(newBalance) - parseFloat(account.current_balance);
-      if (difference === 0) {
+      const num = parseFloat(newBalance);
+      if (num === parseFloat(account.current_balance)) {
         onClose();
         return;
       }
       
       await onSave({
-        account_id: account.id,
-        type: difference > 0 ? 'income' : 'expense',
-        amount: Math.abs(difference),
-        note: 'Balance Adjustment',
-        occurred_at: new Date().toISOString()
+        id: account.id,
+        current_balance: num
       });
       
       toast.success('Balance updated successfully!');
@@ -114,7 +111,7 @@ function SetBalanceModal({ account, onClose, onSave }) {
       <motion.div className="modal" variants={modalVariants} initial="hidden" animate="visible" exit="exit" onClick={(e) => e.stopPropagation()}>
         <h2 className="modal-title">⚖️ Set Balance</h2>
         <p className="text-sm text-muted mb-4">
-          This will automatically create a true-up transaction (income or expense) to adjust your account balance to the specified amount.
+          Directly set the balance for this account. Note: This will not be recorded as a transaction.
         </p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="form-group">
@@ -239,7 +236,7 @@ export default function Accounts() {
           <SetBalanceModal 
             account={balanceModal} 
             onClose={() => setBalanceModal(null)} 
-            onSave={createTxn.mutateAsync} 
+            onSave={update.mutateAsync} 
           />
         )}
       </AnimatePresence>

@@ -45,15 +45,20 @@ router.post('/', async (req, res) => {
 
 // PUT /api/accounts/:id
 router.put('/:id', async (req, res) => {
-  const { name, type, last4, is_active } = req.body;
+  const { name, type, last4, is_active, current_balance } = req.body;
 
   if (type && !['bank', 'cash'].includes(type)) {
     return res.status(400).json({ error: 'type must be bank or cash' });
   }
 
+  const payload = { name, type, last4, is_active };
+  if (current_balance !== undefined) {
+    payload.current_balance = current_balance;
+  }
+
   const { data, error } = await supabase
     .from('accounts')
-    .update({ name, type, last4, is_active })
+    .update(payload)
     .eq('id', req.params.id)
     .eq('user_id', req.userId)
     .select()
