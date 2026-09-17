@@ -18,6 +18,12 @@ apiClient.interceptors.request.use(async (config) => {
 apiClient.interceptors.response.use(
   (res) => res.data,
   (err) => {
+    if (err.response?.status === 401) {
+      console.warn('Received 401, clearing session...');
+      supabase.auth.signOut().then(() => {
+        window.location.href = '/login';
+      });
+    }
     const message = err.response?.data?.error || err.message || 'Request failed';
     return Promise.reject(new Error(message));
   }
