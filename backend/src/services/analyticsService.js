@@ -1,19 +1,10 @@
-/**
- * Analytics Service — §3.4
- *
- * - Savings rate per month
- * - Category trend: current vs 3-month trailing average, flag if >25% deviation
- * - Debt payoff projections across all active debts
- */
-
 import { supabase } from '../lib/supabase.js';
-import { calculateDebtProjection } from './debtService.js';
 import { computeCycleBounds } from '../utils/dateUtils.js';
 
 /**
- * Compute analytics summary for a given month.
+ * Compute analytics trends and historical charts.
  */
-export async function computeAnalytics(userId, month, settings) {
+export async function computeTrends(userId, month, settings) {
   const [year, mon] = month.split('-').map(Number);
 
   // Build date ranges for current month cycle
@@ -21,9 +12,9 @@ export async function computeAnalytics(userId, month, settings) {
   const { start: currentStart, end: currentEnd } = computeCycleBounds(currentMonthStr, settings);
 
   const trailing = [];
-  // Also collect history for last 6 months for chart
   const historyTrends = [];
 
+  // Collect history for last 6 months for chart
   for (let i = 1; i <= 5; i++) {
     let m = mon - i;
     let y = year;
@@ -41,14 +32,10 @@ export async function computeAnalytics(userId, month, settings) {
   // Fetch current month transactions
   const { data: currentTxns } = await supabase
     .from('transactions')
-    .select('*, items(name, priority)')
+    .select('*, items(name)')
     .eq('user_id', userId)
-    .gte('date', currentStart)
-    .lte('date', currentEnd);
-
-  const totalIncome = (currentTxns || []).filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
-  const totalExpenses = (currentTxns || []).filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
-  const savingsRate = totalIncome > 0 ? Math.round(((totalIncome - totalExpenses) / totalIncome) * 10000) / 100 : 0;
+    .gte('occurred_at', currentStart)
+    .lte('occurred_at', currentEnd);
 
   // Category spend per item for current month
   const currentSpendByItem = {};
@@ -71,8 +58,8 @@ export async function computeAnalytics(userId, month, settings) {
       .select('item_id, amount')
       .eq('user_id', userId)
       .eq('type', 'expense')
-      .gte('date', start)
-      .lte('date', end);
+      .gte('occurred_at', start)
+      .lte('occurred_at', end);
 
     (txns || []).forEach((t) => {
       if (!t.item_id) return;
@@ -86,18 +73,37 @@ export async function computeAnalytics(userId, month, settings) {
   const { start: historyStart } = computeCycleBounds(historyStartStr, settings);
   const { data: allHistoryTxns } = await supabase
     .from('transactions')
-    .select('date, type, amount')
+    .select('occurred_at, type, amount')
     .eq('user_id', userId)
-    .gte('date', historyStart)
-    .lte('date', currentEnd);
+    .gte('occurred_at', historyStart)
+    .lte('occurred_at', currentEnd);
 
   (allHistoryTxns || []).forEach(t => {
-    const tYear = parseInt(t.date.substring(0, 4), 10);
-    const tMonth = parseInt(t.date.substring(5, 7), 10);
-    const hNode = historyTrends.find(h => h.year === tYear && h.month === tMonth);
-    if (hNode) {
-      if (t.type === 'income') hNode.income += Number(t.amount);
-      if (t.type === 'expense') hNode.expense += Number(t.amount);
+    // Parse the date properly for timezones if needed, but simple substring works for YYYY-MM
+    // Occurred at is ISO string YYYY-MM-DDTHH...
+    const tYear = parseInt(t.occurred_at.substring(0, 4), 10);
+    const tMonth = parseInt(t.occurred_at.substring(5, 7), 10);
+    
+    // Find the right bucket
+    // Note: Transactions occurring on say 22nd might belong to next cycle depending on bounds.
+    // A more accurate way for history is to group by computeCycleBounds.
+    // For simplicity, we just assign it to the cycle month if it falls in its dates.
+  });
+
+  // Let's accurately group history transactions into the right cycle bucket
+  (allHistoryTxns || []).forEach(t => {
+    const txnDate = new Date(t.occurred_at);
+    // Find which cycle this transaction falls into
+    for (const h of historyTrends) {
+      const hStr = `${h.year}-${String(h.month).padStart(2, '0')}`;
+      const bounds = computeCycleBounds(hStr, settings);
+      const bStart = new Date(bounds.start);
+      const bEnd = new Date(bounds.end);
+      if (txnDate >= bStart && txnDate <= bEnd) {
+        if (t.type === 'income') h.income += Number(t.amount);
+        if (t.type === 'expense') h.expense += Number(t.amount);
+        break;
+      }
     }
   });
 
@@ -108,7 +114,7 @@ export async function computeAnalytics(userId, month, settings) {
     const deviation = avg != null && avg > 0 ? ((amount - avg) / avg) * 100 : null;
     return {
       item_id,
-      name,
+      name: name || 'Uncategorized',
       current_spend: round2(amount),
       trailing_avg: avg != null ? round2(avg) : null,
       deviation_pct: deviation != null ? round2(deviation) : null,
@@ -116,83 +122,11 @@ export async function computeAnalytics(userId, month, settings) {
     };
   });
 
-  // --- Generate Sankey Data ---
-  const sankeyNodes = [{ name: 'Income' }, { name: 'Savings' }];
-  const sankeyLinks = [];
-
-  let nodeIdx = 2;
-  const categoryIndices = {};
-
-  categoryTrends.forEach(c => {
-    if (c.current_spend > 0) {
-      sankeyNodes.push({ name: c.name || 'Uncategorized' });
-      categoryIndices[c.name || 'Uncategorized'] = nodeIdx;
-      nodeIdx++;
-    }
-  });
-
-  const netSavings = totalIncome - totalExpenses;
-
-  if (netSavings >= 0) {
-    if (netSavings > 0) sankeyLinks.push({ source: 0, target: 1, value: round2(netSavings) });
-    categoryTrends.forEach(c => {
-      if (c.current_spend > 0) {
-        sankeyLinks.push({ source: 0, target: categoryIndices[c.name || 'Uncategorized'], value: round2(c.current_spend) });
-      }
-    });
-  } else {
-    // Deficit scenario
-    sankeyNodes[1] = { name: 'Overspent (Deficit)' };
-    const deficit = Math.abs(netSavings);
-    let remainingIncome = totalIncome;
-
-    categoryTrends.forEach(c => {
-      if (c.current_spend > 0) {
-        const catIdx = categoryIndices[c.name || 'Uncategorized'];
-        const fromIncome = Math.min(c.current_spend, remainingIncome);
-        const fromDeficit = c.current_spend - fromIncome;
-        
-        if (fromIncome > 0) {
-          sankeyLinks.push({ source: 0, target: catIdx, value: round2(fromIncome) });
-          remainingIncome -= fromIncome;
-        }
-        if (fromDeficit > 0) {
-          sankeyLinks.push({ source: 1, target: catIdx, value: round2(fromDeficit) });
-        }
-      }
-    });
-  }
-
-  const sankey = { nodes: sankeyNodes, links: sankeyLinks };
-
   return {
-    month,
-    total_income: round2(totalIncome),
-    total_expenses: round2(totalExpenses),
-    savings_rate: savingsRate,
-    net_savings: round2(totalIncome - totalExpenses),
     category_trends: categoryTrends,
     anomaly_count: categoryTrends.filter((c) => c.flagged).length,
-    sankey,
     history: historyTrends.map(h => ({ ...h, income: round2(h.income), expense: round2(h.expense) }))
   };
-}
-
-/**
- * Project payoff timelines for all active debts.
- */
-export function computeDebtProjections(debts, debtAllocations) {
-  return debts.map((debt) => {
-    const monthlyPayment = debtAllocations[debt.id] || Number(debt.min_payment) || 0;
-    const projection = calculateDebtProjection(debt, monthlyPayment);
-    return {
-      id: debt.id,
-      name: debt.name,
-      remaining_balance: Number(debt.remaining_balance),
-      monthly_payment: monthlyPayment,
-      ...projection,
-    };
-  });
 }
 
 function round2(n) {

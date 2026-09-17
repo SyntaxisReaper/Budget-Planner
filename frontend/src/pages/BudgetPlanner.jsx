@@ -1,24 +1,80 @@
-import { useState, useEffect } from 'react';
-import { Calculator, ChevronRight, RefreshCw, HandCoins } from 'lucide-react';
-import { useBudget, useIncome, useItems, useDebts, useGoals, useSettings } from '../hooks/useBudget.js';
+import { useState, useMemo } from 'react';
+import { useBudget, useItems, useDebts, useGoals, useSettings } from '../hooks/useBudget.js';
 import { computeCycleBounds } from '../lib/dateUtils.js';
-import AllocationBreakdown from '../components/AllocationBreakdown.jsx';
-import toast from 'react-hot-toast';
-import { useQuery } from '@tanstack/react-query';
-import apiClient from '../lib/apiClient.js';
 import { motion } from 'framer-motion';
-import { staggerContainer, itemVariants, fadeUp } from '../lib/motion.js';
+import { fadeUp, itemVariants, staggerContainer } from '../lib/motion.js';
+import toast from 'react-hot-toast';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
+function AllocationRow({ type, entity, allocationsMap, onSave, onRemove }) {
+  const allocation = allocationsMap[`${type}_${entity.id}`];
+  const allocatedAmount = allocation?.allocated_amount ? Number(allocation.allocated_amount) : 0;
+  const spentAmount = allocation?.spent_amount ? Number(allocation.spent_amount) : 0;
+  const [val, setVal] = useState(allocatedAmount > 0 ? allocatedAmount.toString() : '');
+
+  const targetAmount = type === 'item' ? entity.amount_needed : type === 'debt' ? entity.min_payment || entity.remaining_balance : entity.target_amount;
+  const pct = allocatedAmount > 0 ? Math.min(100, (spentAmount / allocatedAmount) * 100) : 0;
+
+  async function handleBlur() {
+    const num = parseFloat(val);
+    if (isNaN(num) || num <= 0) {
+      if (allocatedAmount > 0) {
+        try {
+          await onRemove({ target_type: type, target_id: entity.id });
+          toast.success('Allocation removed');
+          setVal('');
+        } catch (err) { toast.error(err.message); }
+      }
+    } else if (num !== allocatedAmount) {
+      try {
+        await onSave({ target_type: type, target_id: entity.id, allocated_amount: num });
+        toast.success('Allocation saved');
+      } catch (err) { toast.error(err.message); }
+    }
+  }
+
+  return (
+    <div className="allocation-row" style={{ alignItems: 'center', background: 'var(--color-bg)', padding: 'var(--space-3)', borderRadius: 'var(--radius)', border: '1px solid var(--color-border)' }}>
+      <div className="allocation-name" style={{ flex: '1 1 30%', minWidth: 200 }}>
+        <div className="font-semibold">{entity.name}</div>
+        <div className="text-xs text-muted">
+          {type === 'item' ? `Needs: ${fmt.format(entity.amount_needed)}` :
+           type === 'debt' ? `Bal: ${fmt.format(entity.remaining_balance)}` :
+           `Goal: ${fmt.format(entity.target_amount)}`}
+        </div>
+      </div>
+      
+      <div className="flex gap-2 items-center" style={{ flex: '0 0 auto' }}>
+        <div className="text-sm font-semibold">Allocated (₹)</div>
+        <input 
+          type="number" 
+          className="input" 
+          style={{ width: 120, padding: '6px 10px', textAlign: 'right' }} 
+          placeholder="0.00" 
+          value={val} 
+          onChange={e => setVal(e.target.value)}
+          onBlur={handleBlur}
+        />
+      </div>
+
+      <div className="allocation-bar-wrap" style={{ flex: '1 1 30%', marginLeft: 16 }}>
+        <div className="flex justify-between text-xs text-muted mb-1">
+          <span>Spent: {fmt.format(spentAmount)}</span>
+          {allocatedAmount > 0 ? <span>{pct.toFixed(0)}%</span> : null}
+        </div>
+        <div className="progress-bar">
+          <div className="progress-fill" style={{ width: `${pct}%`, background: pct > 100 ? 'var(--color-danger)' : 'var(--color-primary)' }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function BudgetPlanner() {
   const [month, setMonth] = useState(new Date().toISOString().substring(0, 7));
-  const [leftover, setLeftover] = useState('savings');
-  const [manualAllocations, setManualAllocations] = useState({});
-  const [isManualMode, setIsManualMode] = useState(false);
 
-  const { budgetQuery, allocateMutation } = useBudget(month);
-  const { query: incomeQuery } = useIncome();
+  const { budgetQuery, allocateMutation, removeAllocation } = useBudget(month);
   const { query: itemsQuery } = useItems();
   const { query: debtsQuery } = useDebts();
   const { query: goalsQuery } = useGoals();
@@ -27,63 +83,22 @@ export default function BudgetPlanner() {
   const { start: cycleStart, end: cycleEnd } = computeCycleBounds(month, settings?.data || settings);
 
   const budget = budgetQuery.data;
-  const income = incomeQuery.data || [];
   const items = itemsQuery.data || [];
   const debts = debtsQuery.data?.filter(d => d.status === 'active') || [];
   const goals = goalsQuery.data || [];
 
-  let totalIncome = 0;
-  if (settings && (settings.cycle_income > 0 || settings.data?.cycle_income > 0)) {
-    totalIncome = Number(settings.cycle_income || settings.data?.cycle_income);
-  } else {
-    totalIncome = income.reduce((s, src) => {
-      let m = Number(src.amount);
-      if (src.frequency === 'weekly') m = m * 52 / 12;
-      else if (src.frequency === 'one-time') m = 0;
-      return s + m;
-    }, 0);
-  }
-
-  // Pre-fill manual allocations with existing budget allocations if we switch modes
-  useEffect(() => {
-    if (isManualMode && budget && budget.allocations) {
-      const current = { ...manualAllocations };
-      let changed = false;
-      budget.allocations.forEach(a => {
-        const key = `${a.target_type}_${a.target_id}`;
-        if (current[key] === undefined && a.is_manual) {
-          current[key] = a.allocated_amount;
-          changed = true;
-        }
-      });
-      if (changed) setManualAllocations(current);
-    }
-  }, [isManualMode, budget]);
-
-  const handleManualChange = (type, id, val) => {
-    setManualAllocations(prev => {
-      const next = { ...prev };
-      if (val === '') {
-        delete next[`${type}_${id}`];
-      } else {
-        next[`${type}_${id}`] = val;
-      }
-      return next;
+  const allocationsMap = useMemo(() => {
+    if (!budget?.allocations) return {};
+    const map = {};
+    budget.allocations.forEach(a => {
+      map[`${a.target_type}_${a.target_id}`] = a;
     });
-  };
+    return map;
+  }, [budget]);
 
-  async function handleAllocate() {
-    try {
-      await allocateMutation.mutateAsync({ 
-        month, 
-        leftover_preference: leftover,
-        manual_allocations: isManualMode ? manualAllocations : {}
-      });
-      toast.success('Budget plan generated!');
-    } catch (err) {
-      toast.error(err.message);
-    }
-  }
+  const totalAllocated = useMemo(() => {
+    return Object.values(allocationsMap).reduce((s, a) => s + Number(a.allocated_amount), 0);
+  }, [allocationsMap]);
 
   return (
     <div className="page">
@@ -93,154 +108,59 @@ export default function BudgetPlanner() {
           <p className="page-subtitle">
             {settings && (settings.data?.cycle_start_date || settings.cycle_start_date)
               ? `Cycle: ${new Date(cycleStart).toLocaleDateString()} — ${new Date(cycleEnd).toLocaleDateString()}` 
-              : 'Allocate your income to zero'}
+              : 'Manually allocate funds for the cycle'}
           </p>
         </div>
-        <motion.button
-          className={`btn ${isManualMode ? 'btn-primary' : 'btn-ghost'}`}
-          onClick={() => setIsManualMode(!isManualMode)}
-          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-        >
-          <HandCoins size={16} /> {isManualMode ? 'Manual Mode: ON' : 'Manual Mode: OFF'}
-        </motion.button>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-semibold text-muted">Cycle Month:</label>
+          <input type="month" className="input" value={month} onChange={(e) => setMonth(e.target.value)} />
+        </div>
       </motion.div>
 
-      <motion.div className="grid-2 mb-6" style={{ alignItems: 'start' }} variants={staggerContainer} initial="hidden" animate="visible">
-        {/* Controls */}
-        <motion.div className="card h-full flex flex-col justify-between" variants={itemVariants}>
-          <div>
-            <div className="section-title mb-5">⚙️ Allocation Settings</div>
-            <div className="flex items-center gap-4" style={{ flexWrap: 'wrap' }}>
-              <div className="form-group" style={{ flex: '0 0 auto' }}>
-                <label className="label">Month/Cycle Start</label>
-                <input id="budget-month" type="month" className="input" value={month}
-                  onChange={(e) => setMonth(e.target.value)} style={{ width: 'auto' }} />
-              </div>
-              <div className="form-group" style={{ flex: '0 0 auto' }}>
-                <label className="label">Leftover Income</label>
-                <select id="budget-leftover" className="select" value={leftover}
-                  onChange={(e) => setLeftover(e.target.value)} style={{ width: 'auto' }}>
-                  <option value="savings">→ Savings Buffer</option>
-                  <option value="debt">→ Extra Debt Payoff</option>
-                </select>
-              </div>
-            </div>
-            
-            {totalIncome > 0 && (
-              <div className="mt-6 text-sm text-muted">
-                Available Income Pool:
-                <span className="font-bold" style={{ color: 'var(--color-text)', marginLeft: 6, fontSize: '1.2rem' }}>
-                  {fmt.format(totalIncome)}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6 flex gap-3">
-            <button
-              id="run-allocator-btn"
-              className="btn btn-primary"
-              onClick={handleAllocate}
-              disabled={allocateMutation.isPending}
-            >
-              {allocateMutation.isPending ? (
-                <><span className="spinner" /> Calculating…</>
-              ) : (
-                <><Calculator size={15} /> Calculate & Save Plan</>
-              )}
-            </button>
-            {budget && (
-              <button className="btn btn-ghost" onClick={handleAllocate} title="Recalculate">
-                <RefreshCw size={14} />
-              </button>
-            )}
+      <motion.div className="grid-2 mb-6" variants={staggerContainer} initial="hidden" animate="visible">
+        <motion.div className="card stat-card" variants={itemVariants}>
+          <div className="stat-label">Total Allocated</div>
+          <div className="stat-value">{fmt.format(totalAllocated)}</div>
+        </motion.div>
+        <motion.div className="card stat-card" variants={itemVariants}>
+          <div className="stat-label">Remaining to zero (vs Planned Income)</div>
+          <div className="stat-value text-muted">
+            {settings ? fmt.format(Math.max(0, Number(settings.data?.cycle_income || settings.cycle_income) - totalAllocated)) : '₹0.00'}
           </div>
         </motion.div>
-
-        {/* Manual Allocation Panel */}
-        {isManualMode && (
-          <motion.div className="card h-full" style={{ maxHeight: '400px', overflowY: 'auto' }} variants={itemVariants}>
-            <div className="section-title mb-4">✍️ Manual Overrides</div>
-            <p className="text-xs text-muted mb-4">Set specific amounts below. Leave blank to let the auto-allocator handle it.</p>
-            
-            <div className="flex flex-col gap-3">
-              {items.map(i => (
-                <div key={`item_${i.id}`} className="flex justify-between items-center gap-4">
-                  <span className="text-sm font-medium">{i.name} (Need: {fmt.format(i.amount_needed)})</span>
-                  <input type="number" className="input" style={{ width: 100 }} placeholder="Auto" 
-                    value={manualAllocations[`item_${i.id}`] || ''} onChange={e => handleManualChange('item', i.id, e.target.value)} />
-                </div>
-              ))}
-              {debts.map(d => (
-                <div key={`debt_${d.id}`} className="flex justify-between items-center gap-4">
-                  <span className="text-sm font-medium">{d.name} (Bal: {fmt.format(d.remaining_balance)})</span>
-                  <input type="number" className="input" style={{ width: 100 }} placeholder="Auto" 
-                    value={manualAllocations[`debt_${d.id}`] || ''} onChange={e => handleManualChange('debt', d.id, e.target.value)} />
-                </div>
-              ))}
-              {goals.map(g => (
-                <div key={`goal_${g.id}`} className="flex justify-between items-center gap-4">
-                  <span className="text-sm font-medium">{g.name} (Goal: {fmt.format(g.target_amount)})</span>
-                  <input type="number" className="input" style={{ width: 100 }} placeholder="Auto" 
-                    value={manualAllocations[`goal_${g.id}`] || ''} onChange={e => handleManualChange('goal', g.id, e.target.value)} />
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
       </motion.div>
 
-      {/* Results */}
-      {budgetQuery.isLoading ? (
-        <div className="empty-state"><div className="spinner" /></div>
-      ) : budget ? (
-        <>
-          {/* Summary cards */}
-          <motion.div className="grid-4 mb-6" variants={staggerContainer} initial="hidden" animate="visible">
-            {[
-              { label: 'Total Income',  value: fmt.format(budget.total_income),     cls: 'primary'  },
-              { label: 'Allocated',     value: fmt.format(budget.total_allocated),  cls: ''         },
-              { label: 'Saved',         value: fmt.format(budget.total_saved),      cls: 'positive' },
-              { label: 'Leftover',      value: fmt.format(Math.max(0, Number(budget.total_income) - Number(budget.total_allocated) - Number(budget.total_saved))), cls: 'text-muted' },
-            ].map(({ label, value, cls }) => (
-              <motion.div key={label} className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
-                <div className="stat-label">{label}</div>
-                <div className={`stat-value ${cls}`}>{value}</div>
-              </motion.div>
+      <div className="card flex flex-col gap-8">
+        <div>
+          <div className="section-title mb-4">🛒 Items</div>
+          <div className="flex flex-col gap-2">
+            {items.map(i => (
+              <AllocationRow key={`item_${i.id}`} type="item" entity={i} allocationsMap={allocationsMap} onSave={allocateMutation.mutateAsync} onRemove={removeAllocation.mutateAsync} />
             ))}
-          </motion.div>
-
-          {/* Allocation breakdown */}
-          <div className="card">
-            <div className="section-header mb-6">
-              <div className="section-title">📊 Allocation Breakdown</div>
-              <div className="text-xs text-muted">
-                {budget.allocations?.length || 0} line items
-              </div>
-            </div>
-            <AllocationBreakdown
-              lineItems={budget.allocations?.map((a) => ({
-                target_type: a.target_type,
-                target_id: a.target_id,
-                name: a.name || a.target_id,
-                allocated_amount: a.allocated_amount,
-                spent_amount: a.spent_amount,
-                is_manual: a.is_manual
-              }))}
-              totalIncome={Number(budget.total_income)}
-              atRiskGoals={[]}
-            />
+            {items.length === 0 && <div className="text-muted text-sm">No items configured.</div>}
           </div>
-        </>
-      ) : (
-        <div className="card empty-state">
-          <div className="empty-state-icon"><Calculator size={28} color="var(--color-text-3)" /></div>
-          <p>No budget plan for {month} yet.</p>
-          <button className="btn btn-primary btn-sm mt-4" onClick={handleAllocate}>
-            <ChevronRight size={14} /> Generate Plan
-          </button>
         </div>
-      )}
+
+        <div>
+          <div className="section-title mb-4">💳 Debts & Rent</div>
+          <div className="flex flex-col gap-2">
+            {debts.map(d => (
+              <AllocationRow key={`debt_${d.id}`} type="debt" entity={d} allocationsMap={allocationsMap} onSave={allocateMutation.mutateAsync} onRemove={removeAllocation.mutateAsync} />
+            ))}
+            {debts.length === 0 && <div className="text-muted text-sm">No active debts or rent.</div>}
+          </div>
+        </div>
+
+        <div>
+          <div className="section-title mb-4">🎯 Goals</div>
+          <div className="flex flex-col gap-2">
+            {goals.map(g => (
+              <AllocationRow key={`goal_${g.id}`} type="goal" entity={g} allocationsMap={allocationsMap} onSave={allocateMutation.mutateAsync} onRemove={removeAllocation.mutateAsync} />
+            ))}
+            {goals.length === 0 && <div className="text-muted text-sm">No goals configured.</div>}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Plus, Filter } from 'lucide-react';
-import { useTransactions, useItems, useSettings } from '../hooks/useBudget.js';
+import { useState, useMemo } from 'react';
+import { Plus, Filter, ArrowRightLeft } from 'lucide-react';
+import { useTransactions, useItems, useAccounts, useDebts, useGoals, useSettings } from '../hooks/useBudget.js';
 import { computeCycleBounds } from '../lib/dateUtils.js';
 import toast from 'react-hot-toast';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
@@ -9,10 +9,23 @@ import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
-function AddTransactionModal({ items, onClose, onCreate }) {
+function toLocalDatetimeString(date) {
+  const tzoffset = date.getTimezoneOffset() * 60000; // offset in milliseconds
+  return new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
+}
+
+function AddTransactionModal({ items, accounts, debts, goals, onClose, onCreate, onTransfer }) {
   const [form, setForm] = useState({
-    item_id: '', amount: '', type: 'expense',
-    date: new Date().toISOString().split('T')[0], note: '',
+    account_id: accounts.length > 0 ? accounts[0].id : '',
+    type: 'expense',
+    amount: '',
+    occurred_at: toLocalDatetimeString(new Date()),
+    item_id: '',
+    debt_id: '',
+    goal_id: '',
+    to_account_id: '',
+    utr_id: '',
+    note: ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -20,10 +33,41 @@ function AddTransactionModal({ items, onClose, onCreate }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!form.account_id) return toast.error('Please select an account');
+    
     setLoading(true);
     try {
-      await onCreate({ ...form, amount: parseFloat(form.amount), item_id: form.item_id || undefined });
-      toast.success('Transaction logged!');
+      const payload = {
+        amount: parseFloat(form.amount),
+        occurred_at: new Date(form.occurred_at).toISOString(),
+        utr_id: form.utr_id || undefined,
+        note: form.note || undefined,
+      };
+
+      if (form.type === 'transfer_out') {
+        if (!form.to_account_id) throw new Error('Please select destination account');
+        if (form.account_id === form.to_account_id) throw new Error('Cannot transfer to same account');
+        await onTransfer({
+          from_account_id: form.account_id,
+          to_account_id: form.to_account_id,
+          ...payload
+        });
+      } else {
+        payload.account_id = form.account_id;
+        payload.type = form.type;
+        if (form.type === 'expense' && form.item_id) payload.item_id = form.item_id;
+        if (form.type === 'debt_payment') {
+          if (!form.debt_id) throw new Error('Please select a debt/rent');
+          payload.debt_id = form.debt_id;
+        }
+        if (form.type === 'goal_contribution') {
+          if (!form.goal_id) throw new Error('Please select a goal');
+          payload.goal_id = form.goal_id;
+        }
+        await onCreate(payload);
+      }
+      
+      toast.success(form.type === 'transfer_out' ? 'Transfer completed!' : 'Transaction logged!');
       onClose();
     } catch (err) {
       toast.error(err.message);
@@ -45,42 +89,96 @@ function AddTransactionModal({ items, onClose, onCreate }) {
       >
         <h2 className="modal-title">➕ Log Transaction</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="form-group">
+            <label className="label">Account</label>
+            <select className="select" value={form.account_id} onChange={(e) => set('account_id', e.target.value)} required>
+              <option value="">— select account —</option>
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({fmt.format(a.current_balance)})</option>)}
+            </select>
+          </div>
+
           <div className="form-row">
             <div className="form-group">
               <label className="label">Type</label>
-              <select id="txn-type" className="select" value={form.type} onChange={(e) => set('type', e.target.value)}>
+              <select className="select" value={form.type} onChange={(e) => {
+                set('type', e.target.value);
+                set('item_id', ''); set('debt_id', ''); set('goal_id', ''); set('to_account_id', '');
+              }}>
                 <option value="expense">Expense</option>
                 <option value="income">Income</option>
+                <option value="transfer_out">Transfer</option>
+                <option value="debt_payment">Debt / Rent Payment</option>
+                <option value="goal_contribution">Goal Contribution</option>
               </select>
             </div>
             <div className="form-group">
-              <label className="label">Amount (?)</label>
-              <input id="txn-amount" type="number" className="input" step="0.01" min="0" placeholder="0.00" required
+              <label className="label">Amount (₹)</label>
+              <input type="number" className="input" step="0.01" min="0" placeholder="0.00" required
                 value={form.amount} onChange={(e) => set('amount', e.target.value)} />
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="label">Item (optional)</label>
-            <select id="txn-item" className="select" value={form.item_id} onChange={(e) => set('item_id', e.target.value)}>
-              <option value="">— none —</option>
-              {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-            </select>
-          </div>
+          {form.type === 'expense' && (
+            <div className="form-group">
+              <label className="label">Item (optional)</label>
+              <select className="select" value={form.item_id} onChange={(e) => set('item_id', e.target.value)}>
+                <option value="">— none —</option>
+                {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+              </select>
+            </div>
+          )}
 
-          <div className="form-group">
-            <label className="label">Date</label>
-            <input id="txn-date" type="date" className="input" required value={form.date} onChange={(e) => set('date', e.target.value)} />
+          {form.type === 'transfer_out' && (
+            <div className="form-group">
+              <label className="label">To Account</label>
+              <select className="select" value={form.to_account_id} onChange={(e) => set('to_account_id', e.target.value)} required>
+                <option value="">— select destination —</option>
+                {accounts.filter(a => a.id !== form.account_id).map((a) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {form.type === 'debt_payment' && (
+            <div className="form-group">
+              <label className="label">Debt / Rent</label>
+              <select className="select" value={form.debt_id} onChange={(e) => set('debt_id', e.target.value)} required>
+                <option value="">— select —</option>
+                {debts.map((d) => <option key={d.id} value={d.id}>{d.name} (rem: {fmt.format(d.remaining_balance)})</option>)}
+              </select>
+            </div>
+          )}
+
+          {form.type === 'goal_contribution' && (
+            <div className="form-group">
+              <label className="label">Goal</label>
+              <select className="select" value={form.goal_id} onChange={(e) => set('goal_id', e.target.value)} required>
+                <option value="">— select —</option>
+                {goals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          <div className="form-row">
+            <div className="form-group">
+              <label className="label">Date & Time</label>
+              <input type="datetime-local" className="input" required value={form.occurred_at} onChange={(e) => set('occurred_at', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="label">UTR / Ref (optional)</label>
+              <input type="text" className="input" placeholder="e.g. UPI Ref" value={form.utr_id} onChange={(e) => set('utr_id', e.target.value)} />
+            </div>
           </div>
 
           <div className="form-group">
             <label className="label">Note</label>
-            <input id="txn-note" type="text" className="input" placeholder="Optional note…" value={form.note} onChange={(e) => set('note', e.target.value)} />
+            <input type="text" className="input" placeholder="Optional note…" value={form.note} onChange={(e) => set('note', e.target.value)} />
           </div>
 
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <button id="txn-submit" type="submit" className="btn btn-primary" disabled={loading}>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
               {loading ? <span className="spinner" /> : 'Log Transaction'}
             </button>
           </div>
@@ -96,18 +194,49 @@ export default function Transactions() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [parent] = useAutoAnimate();
 
-  const { query, create } = useTransactions(month);
-  const { query: itemsQuery } = useItems();
   const { data: settings } = useSettings();
+  const { start: cycleStart, end: cycleEnd } = computeCycleBounds(month, settings?.data || settings);
+
+  const { query, create, remove } = useTransactions({ from: cycleStart, to: cycleEnd });
+  const { query: itemsQuery } = useItems();
+  const { query: accountsQuery, transfer } = useAccounts();
+  const { query: debtsQuery } = useDebts();
+  const { query: goalsQuery } = useGoals();
 
   const transactions = query.data || [];
   const items = itemsQuery.data || [];
+  const accounts = accountsQuery.data?.filter(a => a.is_active) || [];
+  const debts = debtsQuery.data?.filter(d => d.status === 'active') || [];
+  const goals = goalsQuery.data || [];
   
-  const { start: cycleStart, end: cycleEnd } = computeCycleBounds(month, settings?.data || settings);
-
   const filtered = transactions.filter((t) => typeFilter === 'all' || t.type === typeFilter);
+
+  // Quick summary for cycle
   const totalIncome = transactions.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
   const totalExpenses = transactions.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+
+  // Map entities for table display
+  const accountMap = useMemo(() => Object.fromEntries((accountsQuery.data || []).map(a => [a.id, a])), [accountsQuery.data]);
+  const itemMap = useMemo(() => Object.fromEntries(items.map(i => [i.id, i])), [items]);
+  const debtMap = useMemo(() => Object.fromEntries((debtsQuery.data || []).map(d => [d.id, d])), [debtsQuery.data]);
+  const goalMap = useMemo(() => Object.fromEntries(goals.map(g => [g.id, g])), [goals]);
+
+  async function handleDelete(id) {
+    if (!confirm('Delete this transaction? It will automatically reverse its effect on your account balance.')) return;
+    try {
+      await remove.mutateAsync(id);
+      toast.success('Transaction deleted');
+    } catch (err) {
+      toast.error(err.message);
+    }
+  }
+
+  function renderTarget(t) {
+    if (t.type === 'expense' && t.item_id) return itemMap[t.item_id]?.name || 'Item';
+    if (t.type === 'debt_payment' && t.debt_id) return debtMap[t.debt_id]?.name || 'Debt';
+    if (t.type === 'goal_contribution' && t.goal_id) return goalMap[t.goal_id]?.name || 'Goal';
+    return <span className="text-muted">—</span>;
+  }
 
   return (
     <div className="page">
@@ -117,10 +246,10 @@ export default function Transactions() {
           <p className="page-subtitle">
             {settings && (settings.data?.cycle_start_date || settings.cycle_start_date)
               ? `Cycle: ${new Date(cycleStart).toLocaleDateString()} — ${new Date(cycleEnd).toLocaleDateString()}` 
-              : 'Log and track your income & expenses'}
+              : 'The unified ledger for all balances'}
           </p>
         </div>
-        <motion.button id="add-txn-btn" className="btn btn-primary" onClick={() => setShowModal(true)} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+        <motion.button className="btn btn-primary" onClick={() => setShowModal(true)} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
           <Plus size={16} /> Log Transaction
         </motion.button>
       </motion.div>
@@ -128,18 +257,11 @@ export default function Transactions() {
       {/* Summary row */}
       <motion.div className="grid-3 mb-6" variants={staggerContainer} initial="hidden" animate="visible">
         <motion.div className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
-          <div className="stat-label flex items-center justify-between">
-            <span>Income</span>
-            {settings && (settings.data?.cycle_income > 0 || settings.cycle_income > 0) && (
-              <span className="text-xs text-muted" style={{ fontWeight: 400 }}>
-                Planned: {fmt.format(settings.data?.cycle_income || settings.cycle_income)}
-              </span>
-            )}
-          </div>
+          <div className="stat-label">Cycle Income</div>
           <div className="stat-value positive">{fmt.format(totalIncome)}</div>
         </motion.div>
         <motion.div className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
-          <div className="stat-label">Expenses</div>
+          <div className="stat-label">Cycle Expenses</div>
           <div className="stat-value negative">{fmt.format(totalExpenses)}</div>
         </motion.div>
         <motion.div className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
@@ -152,52 +274,80 @@ export default function Transactions() {
 
       {/* Filters */}
       <div className="card">
-        <div className="flex items-center gap-4 mb-5" style={{ flexWrap: 'wrap' }}>
-          <div className="flex items-center gap-2">
-            <Filter size={14} color="var(--color-text-3)" />
-            <span className="text-sm text-muted">Filters:</span>
+        <div className="flex items-center justify-between mb-5" style={{ flexWrap: 'wrap', gap: 'var(--space-4)' }}>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Filter size={14} color="var(--color-text-3)" />
+              <span className="text-sm text-muted">Filters:</span>
+            </div>
+            <input type="month" className="input" style={{ width: 'auto' }}
+              value={month} onChange={(e) => setMonth(e.target.value)} />
+            <select className="select" style={{ width: 'auto' }}
+              value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+              <option value="all">All types</option>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+              <option value="transfer_in">Transfer In</option>
+              <option value="transfer_out">Transfer Out</option>
+              <option value="debt_payment">Debt / Rent Payment</option>
+              <option value="goal_contribution">Goal Contribution</option>
+            </select>
           </div>
-          <input id="txn-month-filter" type="month" className="input" style={{ width: 'auto' }}
-            value={month} onChange={(e) => setMonth(e.target.value)} />
-          <select id="txn-type-filter" className="select" style={{ width: 'auto' }}
-            value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-            <option value="all">All types</option>
-            <option value="income">Income only</option>
-            <option value="expense">Expenses only</option>
-          </select>
         </div>
 
         {query.isLoading ? (
           <div className="empty-state"><div className="spinner" /></div>
         ) : filtered.length === 0 ? (
           <div className="empty-state">
-            <p>No transactions found. Log one to get started.</p>
+            <p>No transactions found for this period.</p>
           </div>
         ) : (
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Item</th>
-                  <th>Note</th>
+                  <th>Date & Time</th>
+                  <th>Account</th>
+                  <th>Category / Target</th>
                   <th>Type</th>
+                  <th>Note / UTR</th>
                   <th style={{ textAlign: 'right' }}>Amount</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody ref={parent}>
                 {filtered.map((t) => (
                   <tr key={t.id}>
-                    <td className="text-muted" style={{ whiteSpace: 'nowrap' }}>{new Date(t.date).toLocaleDateString()}</td>
-                    <td>{t.items?.name || <span className="text-muted">—</span>}</td>
-                    <td className="text-muted">{t.note || '—'}</td>
+                    <td className="text-muted" style={{ whiteSpace: 'nowrap' }}>
+                      {new Date(t.occurred_at).toLocaleString(undefined, { 
+                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                      })}
+                    </td>
+                    <td>{accountMap[t.account_id]?.name || '—'}</td>
+                    <td>{renderTarget(t)}</td>
                     <td>
-                      <span className={`badge ${t.type === 'income' ? 'badge-success' : 'badge-danger'}`}>
-                        {t.type}
+                      <span className={`badge ${
+                        t.type === 'income' || t.type === 'transfer_in' ? 'badge-success' : 
+                        (t.type === 'expense' || t.type === 'transfer_out' ? 'badge-danger' : 'badge-important')
+                      }`}>
+                        {t.type.replace('_', ' ')}
                       </span>
                     </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, color: t.type === 'income' ? 'var(--color-success)' : 'var(--color-text)', whiteSpace: 'nowrap' }}>
-                      {t.type === 'income' ? '+' : '-'}{fmt.format(t.amount)}
+                    <td className="text-muted" style={{ fontSize: '0.8rem' }}>
+                      {t.note}
+                      {t.note && t.utr_id && ' · '}
+                      {t.utr_id && <span style={{ fontFamily: 'monospace' }}>UTR: {t.utr_id}</span>}
+                    </td>
+                    <td style={{ 
+                      textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap',
+                      color: (t.type === 'income' || t.type === 'transfer_in') ? 'var(--color-success)' : 'var(--color-text)' 
+                    }}>
+                      {(t.type === 'income' || t.type === 'transfer_in') ? '+' : '-'}{fmt.format(t.amount)}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button className="btn btn-icon btn-ghost btn-sm text-muted hover:text-danger" onClick={() => handleDelete(t.id)}>
+                        ×
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -209,7 +359,15 @@ export default function Transactions() {
 
       <AnimatePresence>
         {showModal && (
-          <AddTransactionModal items={items} onClose={() => setShowModal(false)} onCreate={create.mutateAsync} />
+          <AddTransactionModal 
+            items={items} 
+            accounts={accounts}
+            debts={debts}
+            goals={goals}
+            onClose={() => setShowModal(false)} 
+            onCreate={create.mutateAsync} 
+            onTransfer={transfer.mutateAsync}
+          />
         )}
       </AnimatePresence>
     </div>

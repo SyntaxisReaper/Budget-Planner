@@ -1,28 +1,38 @@
 import { Router } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
-import { computeCycleBounds, findBudgetMonthForDate } from '../utils/dateUtils.js';
+import { computeCycleBounds } from '../utils/dateUtils.js';
 
 const router = Router();
 router.use(authenticate);
 
-// GET /api/transactions?month=YYYY-MM
+// GET /api/transactions
 router.get('/', async (req, res) => {
+  const { account_id, item_id, debt_id, goal_id, type, from, to, month } = req.query;
+
   let query = supabase
     .from('transactions')
-    .select('*, items(name, priority)')
+    .select('*, items(name, priority), accounts(name, type), debts(name), goals(name)')
     .eq('user_id', req.userId)
-    .order('date', { ascending: false });
+    .order('occurred_at', { ascending: false });
 
-  if (req.query.month) {
+  if (account_id) query = query.eq('account_id', account_id);
+  if (item_id) query = query.eq('item_id', item_id);
+  if (debt_id) query = query.eq('debt_id', debt_id);
+  if (goal_id) query = query.eq('goal_id', goal_id);
+  if (type) query = query.eq('type', type);
+  if (from) query = query.gte('occurred_at', from);
+  if (to) query = query.lte('occurred_at', to);
+
+  if (month) {
     const { data: settings } = await supabase
       .from('user_settings')
       .select('cycle_start_date, cycle_days')
       .eq('user_id', req.userId)
       .single();
 
-    const { start, end } = computeCycleBounds(req.query.month, settings);
-    query = query.gte('date', start).lte('date', end);
+    const { start, end } = computeCycleBounds(month, settings);
+    query = query.gte('occurred_at', start).lte('occurred_at', end);
   }
 
   const { data, error } = await query;
@@ -32,74 +42,58 @@ router.get('/', async (req, res) => {
 
 // POST /api/transactions
 router.post('/', async (req, res) => {
-  const { item_id, amount, type, date, note } = req.body;
-  if (amount == null || !type || !date) {
-    return res.status(400).json({ error: 'amount, type, and date are required' });
+  const { account_id, type, amount, occurred_at, item_id, debt_id, goal_id, utr_id, note } = req.body;
+
+  if (!account_id || !type || amount == null || !occurred_at) {
+    return res.status(400).json({ error: 'account_id, type, amount, and occurred_at are required' });
   }
-  if (!['income', 'expense'].includes(type)) {
-    return res.status(400).json({ error: 'type must be income or expense' });
+
+  if (['transfer_in', 'transfer_out'].includes(type)) {
+    return res.status(400).json({ error: 'Transfers must be created via the account transfer endpoint' });
+  }
+
+  if (type === 'debt_payment' && !debt_id) {
+    return res.status(400).json({ error: 'debt_id is required for debt_payment' });
+  }
+
+  if (type === 'goal_contribution' && !goal_id) {
+    return res.status(400).json({ error: 'goal_id is required for goal_contribution' });
   }
 
   const { data, error } = await supabase
     .from('transactions')
-    .insert({ user_id: req.userId, item_id: item_id || null, amount, type, date, note })
+    .insert({
+      user_id: req.userId,
+      account_id,
+      type,
+      amount,
+      occurred_at,
+      item_id: item_id || null,
+      debt_id: debt_id || null,
+      goal_id: goal_id || null,
+      utr_id: utr_id || null,
+      note: note || null
+    })
     .select()
     .single();
 
   if (error) throw error;
-
-  // Update budget_allocations spent_amount if an item_id provided
-  if (item_id && type === 'expense') {
-    const { data: settings } = await supabase
-      .from('user_settings')
-      .select('cycle_start_date, cycle_days')
-      .eq('user_id', req.userId)
-      .single();
-
-    const firstOfMonth = findBudgetMonthForDate(date, settings);
-
-    // Find the budget for this cycle
-    const { data: budget } = await supabase
-      .from('budgets')
-      .select('id')
-      .eq('user_id', req.userId)
-      .eq('month', firstOfMonth)
-      .single();
-
-    if (budget) {
-      const { data: alloc } = await supabase
-        .from('budget_allocations')
-        .select('id, spent_amount')
-        .eq('budget_id', budget.id)
-        .eq('target_type', 'item')
-        .eq('target_id', item_id)
-        .single();
-
-      if (alloc) {
-        await supabase
-          .from('budget_allocations')
-          .update({ spent_amount: Number(alloc.spent_amount) + Number(amount) })
-          .eq('id', alloc.id);
-      }
-    }
-  }
-
-  // Update user_settings current_balance
-  const { data: settings } = await supabase
-    .from('user_settings')
-    .select('id, current_balance')
-    .eq('user_id', req.userId)
-    .single();
-
-  if (settings) {
-    const delta = type === 'income' ? Number(amount) : -Number(amount);
-    await supabase
-      .from('user_settings')
-      .update({ current_balance: Number(settings.current_balance || 0) + delta })
-      .eq('id', settings.id);
-  }
-
   res.status(201).json(data);
+});
+
+// DELETE /api/transactions/:id
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+
+  // The database trigger will automatically reverse balances on delete
+  const { error } = await supabase
+    .from('transactions')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', req.userId);
+
+  if (error) throw error;
+  res.json({ message: 'Transaction deleted and balances reverted' });
 });
 
 export default router;

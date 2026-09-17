@@ -47,17 +47,10 @@ function GoalModal({ initial, onClose, onSave }) {
             <input id="goal-name" type="text" className="input" placeholder="e.g. Emergency Fund" required
               value={form.name} onChange={(e) => set('name', e.target.value)} autoFocus />
           </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="label">Target Amount (₹)</label>
-              <input id="goal-target" type="number" className="input" step="0.01" min="0" placeholder="5000.00" required
-                value={form.target_amount} onChange={(e) => set('target_amount', e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label className="label">Current Saved (₹)</label>
-              <input id="goal-current" type="number" className="input" step="0.01" min="0" placeholder="0.00"
-                value={form.current_amount} onChange={(e) => set('current_amount', e.target.value)} />
-            </div>
+          <div className="form-group">
+            <label className="label">Target Amount (₹)</label>
+            <input id="goal-target" type="number" className="input" step="0.01" min="0" placeholder="5000.00" required
+              value={form.target_amount} onChange={(e) => set('target_amount', e.target.value)} />
           </div>
           <div className="form-group">
             <label className="label">Target Date (optional)</label>
