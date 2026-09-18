@@ -17,13 +17,15 @@ export default defineConfig({
         background_color: '#13141c',
         display: 'standalone',
         icons: [
-          { src: 'pwa-48x48.png', sizes: '48x48', type: 'image/png' },
-          { src: 'pwa-96x96.png', sizes: '96x96', type: 'image/png' },
-          { src: 'pwa-144x144.png', sizes: '144x144', type: 'image/png' },
-          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'pwa-384x384.png', sizes: '384x384', type: 'image/png' },
-          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'maskable-icon.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          { src: 'icons/icon-48.webp', sizes: '48x48', type: 'image/webp', purpose: 'any' },
+          { src: 'icons/icon-72.webp', sizes: '72x72', type: 'image/webp', purpose: 'any' },
+          { src: 'icons/icon-96.webp', sizes: '96x96', type: 'image/webp', purpose: 'any' },
+          { src: 'icons/icon-128.webp', sizes: '128x128', type: 'image/webp', purpose: 'any' },
+          { src: 'icons/icon-192.webp', sizes: '192x192', type: 'image/webp', purpose: 'any' },
+          { src: 'icons/icon-256.webp', sizes: '256x256', type: 'image/webp', purpose: 'any' },
+          { src: 'icons/icon-512.webp', sizes: '512x512', type: 'image/webp', purpose: 'any' },
+          { src: 'icons/icon-192.webp', sizes: '192x192', type: 'image/webp', purpose: 'maskable' },
+          { src: 'icons/icon-512.webp', sizes: '512x512', type: 'image/webp', purpose: 'maskable' }
         ]
       },
       workbox: {
