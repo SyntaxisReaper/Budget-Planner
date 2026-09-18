@@ -35,8 +35,8 @@ function AllocationRow({ type, entity, allocationsMap, onSave, onRemove }) {
   }
 
   return (
-    <div className="allocation-row" style={{ alignItems: 'center', background: 'var(--color-bg)', padding: 'var(--space-3)', borderRadius: 'var(--radius)', border: '1px solid var(--color-border)' }}>
-      <div className="allocation-name" style={{ flex: '1 1 30%', minWidth: 200 }}>
+    <div className="allocation-row" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', background: 'var(--color-bg)', padding: 'var(--space-4)', borderRadius: 'var(--radius)', border: '1px solid var(--color-border)' }}>
+      <div className="allocation-name" style={{ flex: '1 1 150px' }}>
         <div className="font-semibold">{entity.name}</div>
         <div className="text-xs text-muted">
           {type === 'item' ? `Needs: ${fmt.format(entity.amount_needed)}` :
@@ -50,7 +50,7 @@ function AllocationRow({ type, entity, allocationsMap, onSave, onRemove }) {
         <input 
           type="number" 
           className="input" 
-          style={{ width: 120, padding: '6px 10px', textAlign: 'right' }} 
+          style={{ width: 100, padding: '6px 10px', textAlign: 'right' }} 
           placeholder="0.00" 
           value={val} 
           onChange={e => setVal(e.target.value)}
@@ -58,7 +58,7 @@ function AllocationRow({ type, entity, allocationsMap, onSave, onRemove }) {
         />
       </div>
 
-      <div className="allocation-bar-wrap" style={{ flex: '1 1 30%', marginLeft: 16 }}>
+      <div className="allocation-bar-wrap" style={{ flex: '1 1 200px' }}>
         <div className="flex justify-between text-xs text-muted mb-1">
           <span>Spent: {fmt.format(spentAmount)}</span>
           {allocatedAmount > 0 ? <span>{pct.toFixed(0)}%</span> : null}
