@@ -10,6 +10,8 @@ import { Lock } from 'lucide-react';
 
 import { useSupabaseAuth } from './hooks/useSupabaseAuth.js';
 import { useVersionCheck } from './hooks/useVersionCheck.js';
+import { useSubscriptions, useAccounts, useDebts } from './hooks/useBudget.js';
+import { requestNotificationPermissions, scheduleSubscriptionReminders, checkLowBalance, notifyDebtPaid } from './lib/notifications.js';
 import apiClient from './lib/apiClient.js';
 import Navbar from './components/Navbar.jsx';
 import AuthGuard from './components/AuthGuard.jsx';
@@ -112,6 +114,84 @@ function NativeIntegration() {
       sub.then(listener => listener.remove());
     };
   }, [navigate]);
+
+  return null;
+}
+
+function NotificationManager() {
+  const { query: subQuery } = useSubscriptions();
+  const { query: accQuery } = useAccounts();
+  const { query: debtQuery } = useDebts();
+  
+  const subscriptions = subQuery.data;
+  const accounts = accQuery.data;
+  const debts = debtQuery.data;
+
+  // Track notified states to prevent spam
+  const [notifiedLowAccounts, setNotifiedLowAccounts] = useState(new Set());
+  const [notifiedPaidDebts, setNotifiedPaidDebts] = useState(new Set());
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      requestNotificationPermissions();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (subscriptions && subscriptions.length > 0) {
+      scheduleSubscriptionReminders(subscriptions);
+    }
+  }, [subscriptions]);
+
+  useEffect(() => {
+    if (accounts) {
+      const thresholdStr = localStorage.getItem('low_balance_threshold');
+      if (thresholdStr) {
+        const threshold = parseFloat(thresholdStr);
+        if (!isNaN(threshold)) {
+          accounts.forEach(acc => {
+            if (acc.current_balance < threshold) {
+              if (!notifiedLowAccounts.has(acc.id)) {
+                // Fire notification
+                checkLowBalance([{ ...acc, balance: acc.current_balance }]);
+                setNotifiedLowAccounts(prev => new Set(prev).add(acc.id));
+              }
+            } else {
+              // Reset if it goes back up
+              if (notifiedLowAccounts.has(acc.id)) {
+                setNotifiedLowAccounts(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(acc.id);
+                  return newSet;
+                });
+              }
+            }
+          });
+        }
+      }
+    }
+  }, [accounts, notifiedLowAccounts]);
+
+  useEffect(() => {
+    if (debts) {
+      debts.forEach(debt => {
+        if (debt.remaining_balance <= 0 && debt.total_amount > 0) {
+          if (!notifiedPaidDebts.has(debt.id)) {
+            notifyDebtPaid(debt.creditor);
+            setNotifiedPaidDebts(prev => new Set(prev).add(debt.id));
+          }
+        } else {
+          if (notifiedPaidDebts.has(debt.id)) {
+            setNotifiedPaidDebts(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(debt.id);
+              return newSet;
+            });
+          }
+        }
+      });
+    }
+  }, [debts, notifiedPaidDebts]);
 
   return null;
 }
