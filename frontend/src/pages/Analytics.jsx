@@ -6,11 +6,15 @@ import {
 import { useAnalytics, useDashboard } from '../hooks/useBudget.js';
 import { motion } from 'framer-motion';
 import { staggerContainer, itemVariants, fadeUp } from '../lib/motion.js';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
+import toast from 'react-hot-toast';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
 export default function Analytics() {
   const [month, setMonth] = useState(new Date().toISOString().substring(0, 7));
+  const [downloading, setDownloading] = useState(false);
   const { summary } = useDashboard(month);
   const { trends: trendsQuery } = useAnalytics(month);
 
@@ -29,15 +33,42 @@ export default function Analytics() {
     };
   });
 
+  async function handleDownloadPDF() {
+    const el = document.getElementById('analytics-content');
+    if (!el) return;
+    setDownloading(true);
+    try {
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#13141c' });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Budget_Report_${month}.pdf`);
+      toast.success('Report downloaded!');
+    } catch (err) {
+      toast.error('Failed to generate PDF');
+      console.error(err);
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   return (
-    <div className="page">
+    <div className="page" id="analytics-content">
       <motion.div className="page-header flex items-center justify-between" variants={fadeUp} initial="hidden" animate="visible">
         <div>
           <h1 className="page-title">Analytics</h1>
           <p className="page-subtitle">Spending trends, savings rate, and anomaly detection</p>
         </div>
-        <input type="month" className="input" value={month}
-          onChange={(e) => setMonth(e.target.value)} style={{ width: 'auto' }} />
+        <div className="flex items-center gap-3">
+          <input type="month" className="input" value={month}
+            onChange={(e) => setMonth(e.target.value)} style={{ width: 'auto' }} />
+          <button className="btn btn-secondary" onClick={handleDownloadPDF} disabled={downloading}>
+            {downloading ? <span className="spinner" /> : '📄 PDF Report'}
+          </button>
+        </div>
       </motion.div>
 
       {/* KPI cards */}
