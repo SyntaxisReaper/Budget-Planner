@@ -345,8 +345,8 @@ export default function Debts() {
                 transition={{ delay: i * 0.07 }}
                 whileHover={hoverCard} whileTap={tapCard}
               >
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
-                  <div className="w-full">
+                <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
+                  <div className="w-full" style={{ flex: '1 1 200px' }}>
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="font-bold" style={{ fontSize: 'var(--text-md)', wordBreak: 'break-word' }}>{debt.name}</div>
                       <span className={`badge ${debt.kind === 'rent' ? 'badge-primary' : 'badge-important'}`} style={{ fontSize: '0.65rem', padding: '2px 4px' }}>
@@ -360,13 +360,13 @@ export default function Debts() {
                     {debt.description && <div className="text-xs text-muted mt-1" style={{ fontStyle: 'italic', wordBreak: 'break-word' }}>{debt.description}</div>}
                   </div>
                   <div className="flex flex-wrap gap-2 shrink-0">
-                    <motion.button className="btn btn-accent btn-sm flex-1 sm:flex-none justify-center" onClick={() => setPayDebt(debt)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <motion.button className="btn btn-accent btn-sm flex-1 justify-center" onClick={() => setPayDebt(debt)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                       <DollarSign size={13} /> Pay
                     </motion.button>
-                    <motion.button className="btn btn-ghost btn-sm flex-1 sm:flex-none justify-center" onClick={() => setEditDebt(debt)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <motion.button className="btn btn-ghost btn-sm flex-1 justify-center" onClick={() => setEditDebt(debt)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                       <Pencil size={13} /> Edit
                     </motion.button>
-                    <motion.button className="btn btn-danger btn-sm flex-1 sm:flex-none justify-center" onClick={() => handleDelete(debt.id)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <motion.button className="btn btn-danger btn-sm flex-1 justify-center" onClick={() => handleDelete(debt.id)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                       Delete
                     </motion.button>
                   </div>
