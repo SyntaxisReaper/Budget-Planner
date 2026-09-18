@@ -5,10 +5,33 @@ import { usePeople } from '../hooks/useBudget.js';
 import { useSettings } from '../hooks/useBudget.js'; // Wait, I don't have useSettings exported from useBudget.js. Let me just use useQuery directly.
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../lib/apiClient.js';
-import { pageVariants, staggerContainer, itemVariants, MotionModal } from '../lib/motion.js';
+import { pageVariants, staggerContainer, itemVariants, backdropVariants, modalVariants } from '../lib/motion.js';
 import toast from '../lib/haptics.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+
+function MotionModal({ children, onClose }) {
+  return (
+    <motion.div
+      className="modal-overlay"
+      variants={backdropVariants} initial="hidden" animate="visible" exit="exit"
+      onClick={onClose}
+    >
+      <motion.div
+        className="modal"
+        variants={modalVariants} initial="hidden" animate="visible" exit="exit"
+        onClick={(e) => e.stopPropagation()}
+        drag={window.innerWidth <= 768 ? "y" : false}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        onDragEnd={(e, info) => {
+          if (info.offset.y > 100) onClose();
+        }}
+      >
+        {children}
+      </motion.div>
+    </motion.div>
+  );
+}
 
 function AddPersonModal({ onClose, onCreate }) {
   const [form, setForm] = useState({ person_name: '', amount: '', direction: 'lent', note: '' });
