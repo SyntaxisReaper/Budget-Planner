@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import {
   Landmark, ReceiptText, ShoppingCart, Target, 
   Calculator, BarChart3, Repeat, LogOut, ChevronRight, Plus, ArrowRightLeft, Sparkles, Users
 } from 'lucide-react';
