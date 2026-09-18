@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, DollarSign, Banknote, Pencil } from 'lucide-react';
+import { Plus, DollarSign, Banknote, Pencil, Trash, CreditCard, Home } from 'lucide-react';
 import { useDebts, useAccounts, useTransactions } from '../hooks/useBudget.js';
 import toast from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
@@ -345,30 +345,34 @@ export default function Debts() {
                 transition={{ delay: i * 0.07 }}
                 whileHover={hoverCard} whileTap={tapCard}
               >
-                <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
-                  <div className="w-full" style={{ flex: '1 1 200px' }}>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="font-bold" style={{ fontSize: 'var(--text-md)', wordBreak: 'break-word' }}>{debt.name}</div>
-                      <span className={`badge ${debt.kind === 'rent' ? 'badge-primary' : 'badge-important'}`} style={{ fontSize: '0.65rem', padding: '2px 4px' }}>
-                        {debt.kind.toUpperCase()}
-                      </span>
-                      {debt.priority === 'high' && <span className="badge badge-negative" style={{ fontSize: '0.65rem' }}>High Priority</span>}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="stat-icon" style={{ background: debt.priority === 'high' ? 'rgba(239,68,68,0.1)' : 'rgba(99,102,241,0.1)', marginBottom: 0, height: 48, width: 48 }}>
+                      {debt.kind === 'rent' ? <Home size={20} color={debt.priority === 'high' ? 'var(--color-danger)' : '#6366f1'} /> : <CreditCard size={20} color={debt.priority === 'high' ? 'var(--color-danger)' : '#6366f1'} />}
                     </div>
-                    <div className="text-xs text-muted mt-1">
-                      {debt.debt_date ? `Incurred: ${new Date(debt.debt_date).toLocaleDateString()}` : ''}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">{debt.name}</span>
+                        {debt.priority === 'high' && <span className="badge badge-negative">High Priority</span>}
+                      </div>
+                      <div className="text-xs text-muted mt-1">
+                        {debt.debt_date ? `Incurred: ${new Date(debt.debt_date).toLocaleDateString()}` : ''}
+                      </div>
+                      {debt.description && <div className="text-xs text-muted mt-1" style={{ fontStyle: 'italic', wordBreak: 'break-word' }}>{debt.description}</div>}
                     </div>
-                    {debt.description && <div className="text-xs text-muted mt-1" style={{ fontStyle: 'italic', wordBreak: 'break-word' }}>{debt.description}</div>}
                   </div>
-                  <div className="flex flex-wrap gap-2 shrink-0">
-                    <motion.button className="btn btn-accent btn-sm flex-1 justify-center" onClick={() => setPayDebt(debt)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      <DollarSign size={13} /> Pay
-                    </motion.button>
-                    <motion.button className="btn btn-ghost btn-sm flex-1 justify-center" onClick={() => setEditDebt(debt)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      <Pencil size={13} /> Edit
-                    </motion.button>
-                    <motion.button className="btn btn-danger btn-sm flex-1 justify-center" onClick={() => handleDelete(debt.id)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                      Delete
-                    </motion.button>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <div className="flex gap-2">
+                      <button className="btn btn-accent btn-sm" onClick={() => setPayDebt(debt)} title="Pay">
+                        <DollarSign size={14} /> Pay
+                      </button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setEditDebt(debt)} title="Edit">
+                        <Pencil size={14} />
+                      </button>
+                      <button className="btn btn-ghost btn-sm text-danger" onClick={() => handleDelete(debt.id)} title="Delete">
+                        <Trash size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 

@@ -66,6 +66,8 @@ export default function Settings() {
       cycle_income: form.cycle_income !== '' ? parseFloat(form.cycle_income) : null,
       cycle_start_date: form.cycle_start_date || null,
       cycle_days: parseInt(form.cycle_days, 10),
+      upi_vpa: form.upi_vpa,
+      display_name: form.display_name,
     });
   };
 
