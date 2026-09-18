@@ -279,3 +279,34 @@ export function useSubscriptions() {
 
   return { query, create, update, remove, processAll };
 }
+
+export function usePeople() {
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['people'], queryFn: () => apiClient.get('/people') });
+
+  const create = useMutation({
+    mutationFn: (data) => apiClient.post('/people', data),
+    onSuccess: () => {
+      triggerHaptic();
+      queryClient.invalidateQueries({ queryKey: ['people'] });
+    }
+  });
+
+  const update = useMutation({
+    mutationFn: ({ id, ...data }) => apiClient.put(`/people/${id}`, data),
+    onSuccess: () => {
+      triggerHaptic();
+      queryClient.invalidateQueries({ queryKey: ['people'] });
+    }
+  });
+
+  const remove = useMutation({
+    mutationFn: (id) => apiClient.delete(`/people/${id}`),
+    onSuccess: () => {
+      triggerHaptic();
+      queryClient.invalidateQueries({ queryKey: ['people'] });
+    }
+  });
+
+  return { query, create, update, remove };
+}

@@ -133,8 +133,6 @@ function EditDebtModal({ debt, onClose, onUpdate }) {
         name: form.name,
         kind: form.kind,
         debt_date: form.debt_date,
-        interest_rate: form.interest_rate ? parseFloat(form.interest_rate) : null,
-        min_payment: form.min_payment ? parseFloat(form.min_payment) : null,
         description: form.description || null,
         priority: form.priority,
       });
@@ -169,19 +167,7 @@ function EditDebtModal({ debt, onClose, onUpdate }) {
           </div>
         </div>
         
-        <div className="form-row">
-          <div className="form-group">
-            <label className="label">Interest Rate (%)</label>
-            <input type="number" inputMode="decimal" className="input" step="0.01" min="0" placeholder="0.00"
-              value={form.interest_rate} onChange={(e) => set('interest_rate', e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="label">Min Payment (₹)</label>
-            <input type="number" inputMode="decimal" className="input" step="0.01" min="0" placeholder="0.00"
-              value={form.min_payment} onChange={(e) => set('min_payment', e.target.value)} />
-          </div>
-        </div>
-        
+
         <div className="form-row">
           <div className="form-group">
             <label className="label">Description (Optional)</label>
@@ -393,14 +379,14 @@ export default function Debts() {
                   <span className="text-muted text-xs">{(pct * 100).toFixed(0)}%</span>
                 </div>
                 <div style={{ padding: '0 16px', position: 'relative', height: '48px', background: 'var(--color-surface-2)', borderRadius: '24px', border: '1px dashed var(--color-border)', display: 'flex', alignItems: 'center' }} className="mb-3">
-                  <div style={{ position: 'absolute', right: '16px', fontSize: '20px', opacity: 0.5 }}>🏁</div>
+                  <div style={{ position: 'absolute', right: '16px', fontSize: '20px', opacity: 0.5, zIndex: 1 }}>🏁</div>
                   
-                  <div style={{ position: 'relative', flex: 1, height: '100%' }}>
+                  <div style={{ position: 'relative', flex: 1, height: '100%', display: 'flex', alignItems: 'center' }}>
                     <motion.div
                       initial={{ left: '0%' }}
                       animate={{ left: `${pct * 100}%` }}
                       transition={{ type: 'spring', stiffness: 40, damping: 12, delay: i * 0.1 }}
-                      style={{ position: 'absolute', top: '50%', marginTop: '-16px', marginLeft: '-16px', zIndex: 10 }}
+                      style={{ position: 'absolute', marginLeft: '-16px', zIndex: 10 }}
                     >
                       <div style={{ width: '32px', height: '32px', background: 'var(--color-surface)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', fontSize: '16px' }}>
                         🏎️
@@ -411,7 +397,7 @@ export default function Debts() {
                       initial={{ width: '0%' }}
                       animate={{ width: `${pct * 100}%` }}
                       transition={{ type: 'spring', stiffness: 40, damping: 12, delay: i * 0.1 }}
-                      style={{ position: 'absolute', top: '50%', left: 0, height: '6px', marginTop: '-3px', background: 'var(--color-primary)', borderRadius: '3px', opacity: 0.3 }}
+                      style={{ height: '6px', background: 'var(--color-primary)', borderRadius: '3px', opacity: 0.3 }}
                     />
                   </div>
                 </div>

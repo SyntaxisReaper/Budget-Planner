@@ -34,6 +34,8 @@ const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Subscriptions = lazy(() => import('./pages/Subscriptions.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
 const Notifications = lazy(() => import('./pages/Notifications.jsx'));
+const People = lazy(() => import('./pages/People.jsx'));
+const PayLink = lazy(() => import('./pages/PayLink.jsx'));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -101,8 +103,10 @@ function AnimatedRoutes() {
         <Route path="/analytics"    element={<PageWrapper><Analytics /></PageWrapper>} />
         <Route path="/settings"     element={<PageWrapper><Settings /></PageWrapper>} />
         <Route path="/subscriptions" element={<PageWrapper><Subscriptions /></PageWrapper>} />
+        <Route path="/people"       element={<PageWrapper><People /></PageWrapper>} />
         <Route path="/profile"      element={<PageWrapper><Profile /></PageWrapper>} />
         <Route path="/notifications" element={<PageWrapper><Notifications /></PageWrapper>} />
+        <Route path="/pay/:id"      element={<PageWrapper><PayLink /></PageWrapper>} />
         <Route path="*"             element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>

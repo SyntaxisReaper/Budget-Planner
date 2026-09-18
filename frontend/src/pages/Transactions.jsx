@@ -15,7 +15,7 @@ function toLocalDatetimeString(date) {
   return new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
 }
 
-function AddTransactionModal({ items, accounts, debts, goals, onClose, onCreate, onTransfer }) {
+function AddTransactionModal({ items, accounts, debts, goals, transactions, onClose, onCreate, onTransfer }) {
   const [form, setForm] = useState({
     account_id: accounts.length > 0 ? accounts[0].id : '',
     type: 'expense',
@@ -31,6 +31,25 @@ function AddTransactionModal({ items, accounts, debts, goals, onClose, onCreate,
   const [loading, setLoading] = useState(false);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+  const handleNoteChange = (e) => {
+    const newNote = e.target.value;
+    set('note', newNote);
+
+    if (newNote.length > 2 && form.type === 'expense' && !form.item_id) {
+      // Find a past expense transaction that matches the note case-insensitively and has an item_id
+      const match = transactions?.find(t => 
+        t.type === 'expense' && 
+        t.item_id && 
+        t.note && 
+        t.note.toLowerCase().includes(newNote.toLowerCase())
+      );
+      
+      if (match) {
+        set('item_id', match.item_id);
+      }
+    }
+  };
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -177,7 +196,7 @@ function AddTransactionModal({ items, accounts, debts, goals, onClose, onCreate,
 
           <div className="form-group">
             <label className="label">Note</label>
-            <input type="text" className="input" placeholder="Optional note…" value={form.note} onChange={(e) => set('note', e.target.value)} />
+            <input type="text" className="input" placeholder="Optional note…" value={form.note} onChange={handleNoteChange} />
           </div>
 
           <div className="modal-actions">
@@ -394,6 +413,7 @@ export default function Transactions() {
             accounts={accounts}
             debts={debts}
             goals={goals}
+            transactions={transactions}
             onClose={() => setShowModal(false)} 
             onCreate={create.mutateAsync} 
             onTransfer={transfer.mutateAsync}

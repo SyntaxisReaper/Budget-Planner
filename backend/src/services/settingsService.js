@@ -25,7 +25,7 @@ export async function getSettings(userId) {
 }
 
 export async function updateSettings(userId, settingsData) {
-  const { current_balance, cycle_income, cycle_start_date, cycle_days } = settingsData;
+  const { current_balance, cycle_income, cycle_start_date, cycle_days, upi_vpa, display_name } = settingsData;
   
   const { data, error } = await supabase
     .from('user_settings')
@@ -35,6 +35,8 @@ export async function updateSettings(userId, settingsData) {
       cycle_income,
       cycle_start_date,
       cycle_days,
+      upi_vpa,
+      display_name,
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' })
     .select()
