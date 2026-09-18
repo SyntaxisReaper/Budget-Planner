@@ -331,7 +331,7 @@ export default function Debts() {
       <motion.div className="grid-3 mb-6" variants={staggerContainer} initial="hidden" animate="visible">
         {[
           { icon: <Banknote size={18} color="var(--color-danger)" />, bg: 'rgba(239,68,68,0.1)', label: 'Total Remaining', value: fmt.format(totalRemaining), cls: 'negative' },
-          { icon: <DollarSign size={18} color="var(--color-text)" />, bg: 'rgba(237,237,237,0.08)', label: 'Active Items', value: active.length, cls: 'primary' },
+          { icon: <Banknote size={18} color="var(--color-text)" />, bg: 'var(--color-surface-2)', label: 'Active Items', value: active.length, cls: 'primary' },
         ].map(({ icon, bg, label, value, cls }) => (
           <motion.div key={label} className="card stat-card" variants={itemVariants} whileHover={{ y: -3, transition: { duration: 0.18 } }}>
             <div className="stat-icon" style={{ background: bg }}>{icon}</div>
@@ -359,7 +359,7 @@ export default function Debts() {
                 transition={{ delay: i * 0.07 }}
                 whileHover={hoverCard} whileTap={tapCard}
               >
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
                   <div>
                     <div className="flex items-center gap-2">
                       <div className="font-bold" style={{ fontSize: 'var(--text-md)' }}>{debt.name}</div>
