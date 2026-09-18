@@ -106,7 +106,6 @@ function AnimatedRoutes() {
         <Route path="/people"       element={<PageWrapper><People /></PageWrapper>} />
         <Route path="/profile"      element={<PageWrapper><Profile /></PageWrapper>} />
         <Route path="/notifications" element={<PageWrapper><Notifications /></PageWrapper>} />
-        <Route path="/pay/:id"      element={<PageWrapper><PayLink /></PageWrapper>} />
         <Route path="*"             element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>
@@ -318,6 +317,7 @@ function AppShell() {
       <Routes>
         <Route path="/login"  element={user ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/signup" element={user ? <Navigate to="/" replace /> : <Signup />} />
+        <Route path="/pay/:id" element={<PayLink />} />
         <Route
           path="/*"
           element={

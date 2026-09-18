@@ -345,15 +345,15 @@ export default function Debts() {
                 transition={{ delay: i * 0.07 }}
                 whileHover={hoverCard} whileTap={tapCard}
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <div className="stat-icon" style={{ background: debt.priority === 'high' ? 'rgba(239,68,68,0.1)' : 'rgba(99,102,241,0.1)', marginBottom: 0, height: 48, width: 48 }}>
+                <div className="flex items-start justify-between mb-4 gap-2">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="stat-icon shrink-0" style={{ background: debt.priority === 'high' ? 'rgba(239,68,68,0.1)' : 'rgba(99,102,241,0.1)', marginBottom: 0, height: 48, width: 48 }}>
                       {debt.kind === 'rent' ? <Home size={20} color={debt.priority === 'high' ? 'var(--color-danger)' : '#6366f1'} /> : <CreditCard size={20} color={debt.priority === 'high' ? 'var(--color-danger)' : '#6366f1'} />}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold">{debt.name}</span>
-                        {debt.priority === 'high' && <span className="badge badge-negative">High Priority</span>}
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold break-words whitespace-normal max-w-full leading-tight">{debt.name}</span>
+                        {debt.priority === 'high' && <span className="badge badge-negative shrink-0">High</span>}
                       </div>
                       <div className="text-xs text-muted mt-1">
                         {debt.debt_date ? `Incurred: ${new Date(debt.debt_date).toLocaleDateString()}` : ''}
