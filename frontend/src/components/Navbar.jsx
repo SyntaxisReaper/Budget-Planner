@@ -1,10 +1,11 @@
+import { impactLight } from '../lib/haptics.js';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, ReceiptText, ShoppingCart,
   CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Landmark, Repeat, User, Bell, Plane
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { slideInLeft } from '../lib/motion.js';
+import { slideInLeft , tapFeedback } from '../lib/motion.js';
 
 const links = [
   { to: '/',             icon: LayoutDashboard, label: 'Dashboard'    },

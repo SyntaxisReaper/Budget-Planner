@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../lib/apiClient.js';
-import toast from '../lib/haptics.js';
+import toast, { impactLight } from '../lib/haptics.js';
 import { Settings as SettingsIcon, Wallet, Calendar, RefreshCw, Download, Upload, Shield, Bell } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { staggerContainer, itemVariants, fadeUp } from '../lib/motion.js';
+import { staggerContainer, itemVariants, fadeUp , tapFeedback } from '../lib/motion.js';
 import { Capacitor } from '@capacitor/core';
 import Papa from 'papaparse';
 import { useAccounts } from '../hooks/useBudget.js';

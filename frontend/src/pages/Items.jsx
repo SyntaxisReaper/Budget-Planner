@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useItems } from '../hooks/useBudget.js';
-import toast from '../lib/haptics.js';
+import toast, { impactLight } from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants } from '../lib/motion.js';
+import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants , tapFeedback } from '../lib/motion.js';
 
 const PRIORITIES = ['essential', 'important', 'optional'];
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });

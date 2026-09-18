@@ -2,8 +2,8 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { CreditCard, CheckCircle2 } from 'lucide-react';
-import { pageVariants, fadeUp } from '../lib/motion.js';
-import toast from '../lib/haptics.js';
+import { pageVariants, fadeUp , tapFeedback } from '../lib/motion.js';
+import toast, { impactLight } from '../lib/haptics.js';
 import apiClient from '../lib/apiClient.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });

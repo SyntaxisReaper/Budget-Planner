@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, Wallet, Landmark } from 'lucide-react';
 import { useAccounts, useTransactions } from '../hooks/useBudget.js';
-import toast from '../lib/haptics.js';
+import toast, { impactLight } from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fadeUp, backdropVariants, modalVariants } from '../lib/motion.js';
+import { fadeUp, backdropVariants, modalVariants , tapFeedback } from '../lib/motion.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
