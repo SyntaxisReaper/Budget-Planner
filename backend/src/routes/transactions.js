@@ -40,6 +40,31 @@ router.get('/', async (req, res) => {
   res.json(data);
 });
 
+// POST /api/transactions/bulk
+router.post('/bulk', async (req, res) => {
+  const transactions = req.body;
+  if (!Array.isArray(transactions)) {
+    return res.status(400).json({ error: 'Expected an array of transactions' });
+  }
+
+  const inserts = transactions.map(t => ({
+    user_id: req.userId,
+    account_id: t.account_id,
+    type: t.type,
+    amount: t.amount,
+    occurred_at: t.occurred_at,
+    note: t.note || null
+  }));
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .insert(inserts)
+    .select();
+
+  if (error) throw error;
+  res.status(201).json(data);
+});
+
 // POST /api/transactions
 router.post('/', async (req, res) => {
   const { account_id, type, amount, occurred_at, item_id, debt_id, goal_id, utr_id, note } = req.body;
