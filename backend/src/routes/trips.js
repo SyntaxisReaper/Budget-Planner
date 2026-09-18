@@ -1,29 +1,9 @@
-import express from 'express';
-import { createClient } from '@supabase/supabase-js';
+import { Router } from 'express';
+import { supabase } from '../lib/supabase.js';
+import { authenticate } from '../middleware/auth.js';
 
-const router = express.Router();
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// Middleware to extract user_id from authorization header if needed, 
-// though typically RLS handles this if we pass the JWT.
-// For service role backend, we usually bypass RLS, so we need to filter by user_id manually 
-// or instantiate a supabase client with the user's JWT. 
-// In this app, we assume the user_id is passed via headers or we rely on the service key.
-// Let's implement manual user_id filtering like other routes probably do.
-
-const getUserId = (req) => req.headers['x-user-id']; // Example, adjust based on existing routes
-
-router.use((req, res, next) => {
-    const userId = getUserId(req);
-    if (!userId) {
-        return res.status(401).json({ error: 'Unauthorized: missing x-user-id header' });
-    }
-    req.userId = userId;
-    next();
-});
+const router = Router();
+router.use(authenticate);
 
 // GET /api/trips
 router.get('/', async (req, res) => {
