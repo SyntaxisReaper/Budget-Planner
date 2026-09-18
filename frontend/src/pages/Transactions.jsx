@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { TableVirtuoso } from 'react-virtuoso';
 import { Plus, Filter, ArrowRightLeft } from 'lucide-react';
-import { useTransactions, useItems, useAccounts, useDebts, useGoals, useSettings } from '../hooks/useBudget.js';
+import { useTransactions, useItems, useAccounts, useDebts, useGoals, useSettings, useCategorizationTrainingData } from '../hooks/useBudget.js';
+import { trainCategorizer, predictCategory } from '../lib/categorization.js';
 import { computeCycleBounds } from '../lib/dateUtils.js';
 import toast from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
@@ -15,7 +16,7 @@ function toLocalDatetimeString(date) {
   return new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
 }
 
-function AddTransactionModal({ items, accounts, debts, goals, transactions, onClose, onCreate, onTransfer }) {
+function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose, onCreate, onTransfer }) {
   const [form, setForm] = useState({
     account_id: accounts.length > 0 ? accounts[0].id : '',
     type: 'expense',
@@ -32,23 +33,20 @@ function AddTransactionModal({ items, accounts, debts, goals, transactions, onCl
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
-  const handleNoteChange = (e) => {
-    const newNote = e.target.value;
-    set('note', newNote);
-
-    if (newNote.length > 2 && form.type === 'expense' && !form.item_id) {
-      // Find a past expense transaction that matches the note case-insensitively and has an item_id
-      const match = transactions?.find(t => 
-        t.type === 'expense' && 
-        t.item_id && 
-        t.note && 
-        t.note.toLowerCase().includes(newNote.toLowerCase())
-      );
+  const handleTextChange = (field, value) => {
+    setForm((p) => {
+      const next = { ...p, [field]: value };
+      const combinedText = `${next.note || ''} ${next.utr_id || ''}`.trim();
       
-      if (match) {
-        set('item_id', match.item_id);
+      // Predict category only if expense and no explicit item is selected yet
+      if (combinedText.length >= 3 && next.type === 'expense' && !p.item_id) {
+        const predictedItemId = predictCategory(combinedText, wordFreq);
+        if (predictedItemId) {
+          next.item_id = predictedItemId;
+        }
       }
-    }
+      return next;
+    });
   };
 
   async function handleSubmit(e) {
@@ -190,13 +188,13 @@ function AddTransactionModal({ items, accounts, debts, goals, transactions, onCl
             </div>
             <div className="form-group">
               <label className="label">UTR / Ref (optional)</label>
-              <input type="text" className="input" placeholder="e.g. UPI Ref" value={form.utr_id} onChange={(e) => set('utr_id', e.target.value)} />
+              <input type="text" className="input" placeholder="e.g. UPI Ref" value={form.utr_id} onChange={(e) => handleTextChange('utr_id', e.target.value)} />
             </div>
           </div>
 
           <div className="form-group">
             <label className="label">Note</label>
-            <input type="text" className="input" placeholder="Optional note…" value={form.note} onChange={handleNoteChange} />
+            <input type="text" className="input" placeholder="Optional note…" value={form.note} onChange={(e) => handleTextChange('note', e.target.value)} />
           </div>
 
           <div className="modal-actions">
@@ -221,6 +219,9 @@ export default function Transactions() {
 
   const { data: settings } = useSettings();
   const { start: cycleStart, end: cycleEnd } = computeCycleBounds(month, settings?.data || settings);
+
+  const { query: trainingQuery } = useCategorizationTrainingData();
+  const wordFreq = useMemo(() => trainCategorizer(trainingQuery.data), [trainingQuery.data]);
 
   const { query, create, remove } = useTransactions({ from: cycleStart, to: cycleEnd });
   const { query: itemsQuery } = useItems();
@@ -248,9 +249,10 @@ export default function Transactions() {
       const matchNote = t.note?.toLowerCase().includes(q);
       const matchUtr = t.utr_id?.toLowerCase().includes(q);
       const targetName = (
-        (t.type === 'expense' && itemMap[t.item_id]?.name) ||
-        (t.type === 'debt_payment' && debtMap[t.debt_id]?.name) ||
-        (t.type === 'goal_contribution' && goalMap[t.goal_id]?.name) ||
+        (t.type === 'expense' && (t.items?.name || itemMap[t.item_id]?.name)) ||
+        (t.type === 'debt_payment' && (t.debts?.name || debtMap[t.debt_id]?.name)) ||
+        (t.type === 'goal_contribution' && (t.goals?.name || goalMap[t.goal_id]?.name)) ||
+        (t.type === 'expense' && !t.item_id && t.note?.startsWith('Auto-payment: ') ? t.note.replace('Auto-payment: ', 'Subscription: ') : '') ||
         ''
       ).toLowerCase();
       if (!matchNote && !matchUtr && !targetName.includes(q)) return false;
@@ -273,9 +275,12 @@ export default function Transactions() {
   }
 
   function renderTarget(t) {
-    if (t.type === 'expense' && t.item_id) return itemMap[t.item_id]?.name || 'Item';
-    if (t.type === 'debt_payment' && t.debt_id) return debtMap[t.debt_id]?.name || 'Debt';
-    if (t.type === 'goal_contribution' && t.goal_id) return goalMap[t.goal_id]?.name || 'Goal';
+    if (t.type === 'expense' && t.item_id) return t.items?.name || itemMap[t.item_id]?.name || 'Item';
+    if (t.type === 'debt_payment' && t.debt_id) return t.debts?.name || debtMap[t.debt_id]?.name || 'Debt';
+    if (t.type === 'goal_contribution' && t.goal_id) return t.goals?.name || goalMap[t.goal_id]?.name || 'Goal';
+    if (t.type === 'expense' && !t.item_id && t.note?.startsWith('Auto-payment: ')) {
+      return <span className="text-primary font-medium">{t.note.replace('Auto-payment: ', 'Subscription: ')}</span>;
+    }
     return <span className="text-muted">—</span>;
   }
 
@@ -413,7 +418,7 @@ export default function Transactions() {
             accounts={accounts}
             debts={debts}
             goals={goals}
-            transactions={transactions}
+            wordFreq={wordFreq}
             onClose={() => setShowModal(false)} 
             onCreate={create.mutateAsync} 
             onTransfer={transfer.mutateAsync}

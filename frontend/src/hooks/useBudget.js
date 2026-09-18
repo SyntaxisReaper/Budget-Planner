@@ -214,6 +214,14 @@ export function useTransactions(filters = {}) {
   return { query, create, remove };
 }
 
+export function useCategorizationTrainingData() {
+  return useQuery({
+    queryKey: ['transactions_learning'],
+    queryFn: () => apiClient.get('/transactions?type=expense'),
+    staleTime: 1000 * 60 * 5 // Cache for 5 mins
+  });
+}
+
 export function useDashboard(month) {
   const monthKey = month || new Date().toISOString().substring(0, 7);
   const summary = useQuery({
