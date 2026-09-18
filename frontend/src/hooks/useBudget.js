@@ -242,3 +242,44 @@ export function useSettings() {
     queryFn: () => apiClient.get('/settings').catch(() => null),
   });
 }
+
+export function useSubscriptions() {
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['subscriptions'], queryFn: () => apiClient.get('/subscriptions') });
+
+  const create = useMutation({
+    mutationFn: (data) => apiClient.post('/subscriptions', data),
+    onSuccess: () => {
+      triggerHaptic();
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+    }
+  });
+
+  const update = useMutation({
+    mutationFn: ({ id, ...data }) => apiClient.put(`/subscriptions/${id}`, data),
+    onSuccess: () => {
+      triggerHaptic();
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+    }
+  });
+
+  const remove = useMutation({
+    mutationFn: (id) => apiClient.delete(`/subscriptions/${id}`),
+    onSuccess: () => {
+      triggerHaptic();
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+    }
+  });
+
+  const processAll = useMutation({
+    mutationFn: () => apiClient.post('/subscriptions/process'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    }
+  });
+
+  return { query, create, update, remove, processAll };
+}

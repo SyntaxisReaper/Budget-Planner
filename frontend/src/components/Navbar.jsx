@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, ReceiptText, ShoppingCart,
-  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Menu, Landmark
+  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Menu, Landmark, Repeat
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { slideInLeft } from '../lib/motion.js';
@@ -11,6 +11,7 @@ const links = [
   { to: '/',             icon: LayoutDashboard, label: 'Dashboard'    },
   { to: '/accounts',     icon: Landmark,        label: 'Accounts'     },
   { to: '/transactions', icon: ReceiptText,     label: 'Transactions' },
+  { to: '/subscriptions',icon: Repeat,          label: 'Subscriptions'},
   { to: '/items',        icon: ShoppingCart,    label: 'Items'        },
   { to: '/debts',        icon: CreditCard,      label: 'Debts'        },
   { to: '/goals',        icon: Target,          label: 'Goals'        },

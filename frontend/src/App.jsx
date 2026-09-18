@@ -1,12 +1,16 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { Capacitor } from '@capacitor/core';
+import { NativeBiometric } from '@capgo/capacitor-native-biometric';
+import { Lock } from 'lucide-react';
 
 import { useSupabaseAuth } from './hooks/useSupabaseAuth.js';
 import { useVersionCheck } from './hooks/useVersionCheck.js';
+import apiClient from './lib/apiClient.js';
 import Navbar from './components/Navbar.jsx';
 import AuthGuard from './components/AuthGuard.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
@@ -24,6 +28,7 @@ const Goals = lazy(() => import('./pages/Goals.jsx'));
 const BudgetPlanner = lazy(() => import('./pages/BudgetPlanner.jsx'));
 const Analytics = lazy(() => import('./pages/Analytics.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
+const Subscriptions = lazy(() => import('./pages/Subscriptions.jsx'));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -69,6 +74,7 @@ function AnimatedRoutes() {
         <Route path="/budget"       element={<PageWrapper><BudgetPlanner /></PageWrapper>} />
         <Route path="/analytics"    element={<PageWrapper><Analytics /></PageWrapper>} />
         <Route path="/settings"     element={<PageWrapper><Settings /></PageWrapper>} />
+        <Route path="/subscriptions" element={<PageWrapper><Subscriptions /></PageWrapper>} />
         <Route path="*"             element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>
@@ -77,15 +83,43 @@ function AnimatedRoutes() {
 
 function AppShell() {
   const { user, loading, signOut } = useSupabaseAuth();
+  const [unlocked, setUnlocked] = useState(
+    !Capacitor.isNativePlatform() || localStorage.getItem('biometricEnabled') !== 'true'
+  );
   
   // Start the background polling for Vercel updates
   useVersionCheck();
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && Capacitor.isNativePlatform() && localStorage.getItem('biometricEnabled') === 'true' && !unlocked) {
+      NativeBiometric.isAvailable().then(result => {
+        if (result.isAvailable) {
+          NativeBiometric.verifyIdentity({
+            reason: "Authenticate to view Budget",
+            title: "Unlock Budget Planner",
+          }).then(() => {
+            setUnlocked(true);
+            SplashScreen.hide().catch(() => {});
+          }).catch(() => {
+            // failed, leave locked
+            SplashScreen.hide().catch(() => {});
+          });
+        } else {
+          setUnlocked(true);
+          SplashScreen.hide().catch(() => {});
+        }
+      });
+    } else if (!loading) {
       SplashScreen.hide().catch(() => {});
     }
-  }, [loading]);
+  }, [loading, unlocked]);
+
+  useEffect(() => {
+    // Silently process overdue subscriptions when app loads
+    if (user && unlocked) {
+      apiClient.post('/subscriptions/process').catch(() => {});
+    }
+  }, [user, unlocked]);
 
   if (loading) {
     return (
@@ -101,6 +135,21 @@ function AppShell() {
         >
           Loading…
         </motion.p>
+      </div>
+    );
+  }
+
+  if (!unlocked) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: 24, background: 'var(--color-bg)' }}>
+        <div style={{ padding: 24, borderRadius: '50%', background: 'rgba(0,0,0,0.05)' }}>
+          <Lock size={48} color="var(--color-text)" />
+        </div>
+        <h2 style={{ fontWeight: 600 }}>App Locked</h2>
+        <button className="btn btn-primary" onClick={() => {
+          NativeBiometric.verifyIdentity({ reason: "Authenticate to view Budget", title: "Unlock Budget Planner" })
+            .then(() => setUnlocked(true)).catch(() => {});
+        }}>Unlock with Biometrics</button>
       </div>
     );
   }
