@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2, Wallet, Landmark } from 'lucide-react';
 import { useAccounts, useTransactions } from '../hooks/useBudget.js';
-import toast from 'react-hot-toast';
+import toast from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeUp, backdropVariants, modalVariants } from '../lib/motion.js';
@@ -116,7 +116,7 @@ function SetBalanceModal({ account, onClose, onSave }) {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="form-group">
             <label className="label">New Balance (₹)</label>
-            <input type="number" className="input" step="0.01" required
+            <input type="number" inputMode="decimal" className="input" step="0.01" required
               value={newBalance} onChange={(e) => setNewBalance(e.target.value)} autoFocus />
           </div>
           <div className="modal-actions">

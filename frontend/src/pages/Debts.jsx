@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, DollarSign, Banknote, Pencil } from 'lucide-react';
 import { useDebts, useAccounts, useTransactions } from '../hooks/useBudget.js';
-import toast from 'react-hot-toast';
+import toast from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants, hoverCard, tapCard } from '../lib/motion.js';
@@ -81,7 +81,7 @@ function AddDebtModal({ onClose, onCreate }) {
         <div className="form-row">
           <div className="form-group">
             <label className="label">Amount (₹)</label>
-            <input type="number" className="input" step="0.01" min="0" placeholder="0.00" required
+            <input type="number" inputMode="decimal" className="input" step="0.01" min="0" placeholder="0.00" required
               value={form.principal} onChange={(e) => set('principal', e.target.value)} />
           </div>
           <div className="form-group">
@@ -172,12 +172,12 @@ function EditDebtModal({ debt, onClose, onUpdate }) {
         <div className="form-row">
           <div className="form-group">
             <label className="label">Interest Rate (%)</label>
-            <input type="number" className="input" step="0.01" min="0" placeholder="0.00"
+            <input type="number" inputMode="decimal" className="input" step="0.01" min="0" placeholder="0.00"
               value={form.interest_rate} onChange={(e) => set('interest_rate', e.target.value)} />
           </div>
           <div className="form-group">
             <label className="label">Min Payment (₹)</label>
-            <input type="number" className="input" step="0.01" min="0" placeholder="0.00"
+            <input type="number" inputMode="decimal" className="input" step="0.01" min="0" placeholder="0.00"
               value={form.min_payment} onChange={(e) => set('min_payment', e.target.value)} />
           </div>
         </div>
@@ -255,7 +255,7 @@ function LogPaymentModal({ debt, accounts, onClose, onLog }) {
         <div className="form-row">
           <div className="form-group">
             <label className="label">Amount (₹)</label>
-            <input type="number" className="input" step="0.01" min="0" placeholder="0.00" required
+            <input type="number" inputMode="decimal" className="input" step="0.01" min="0" placeholder="0.00" required
               value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} autoFocus />
           </div>
           <div className="form-group">

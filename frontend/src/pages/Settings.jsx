@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../lib/apiClient.js';
-import toast from 'react-hot-toast';
+import toast from '../lib/haptics.js';
 import { Settings as SettingsIcon, Wallet, Calendar, RefreshCw, Download, Upload, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { staggerContainer, itemVariants, fadeUp } from '../lib/motion.js';
@@ -188,8 +188,7 @@ export default function Settings() {
             </div>
             <div className="form-group">
               <label className="label">Balance (₹)</label>
-              <input
-                type="number"
+              <input type="number" inputMode="decimal"
                 className="input"
                 step="0.01"
                 min="0"
@@ -213,8 +212,7 @@ export default function Settings() {
             </div>
             <div className="form-group">
               <label className="label">Income (₹)</label>
-              <input
-                type="number"
+              <input type="number" inputMode="decimal"
                 className="input"
                 step="0.01"
                 min="0"
@@ -248,8 +246,7 @@ export default function Settings() {
               </div>
               <div className="form-group">
                 <label className="label">Cycle Length (Days)</label>
-                <input
-                  type="number"
+                <input type="number" inputMode="decimal"
                   className="input"
                   min="1"
                   max="365"

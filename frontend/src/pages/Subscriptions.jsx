@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, Repeat, CreditCard, Pencil, Trash } from 'lucide-react';
 import { useSubscriptions, useAccounts } from '../hooks/useBudget.js';
-import toast from 'react-hot-toast';
+import toast from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants, hoverCard, tapCard } from '../lib/motion.js';
@@ -80,7 +80,7 @@ function SubscriptionModal({ sub, accounts, onClose, onSave }) {
         <div className="form-row">
           <div className="form-group">
             <label className="label">Amount (₹)</label>
-            <input type="number" className="input" step="0.01" min="0" required
+            <input type="number" inputMode="decimal" className="input" step="0.01" min="0" required
               value={form.amount} onChange={(e) => set('amount', e.target.value)} />
           </div>
           <div className="form-group">
