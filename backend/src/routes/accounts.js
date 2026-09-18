@@ -115,6 +115,7 @@ router.post('/:id/transfer', async (req, res) => {
   }
 
   const { data, error } = await supabase.rpc('transfer_between_accounts', {
+    p_user_id: req.userId,
     p_from_account_id: from_account_id,
     p_to_account_id: to_account_id,
     p_amount: amount,

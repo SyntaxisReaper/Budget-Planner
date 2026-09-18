@@ -47,6 +47,18 @@ router.post('/bulk', async (req, res) => {
     return res.status(400).json({ error: 'Expected an array of transactions' });
   }
 
+  for (const t of transactions) {
+    if (t.amount == null || t.amount <= 0) {
+      return res.status(400).json({ error: 'Amount must be greater than zero for all transactions' });
+    }
+  }
+
+  const accountIds = [...new Set(transactions.map(t => t.account_id))];
+  const { data: accounts } = await supabase.from('accounts').select('id').eq('user_id', req.userId).in('id', accountIds);
+  if (!accounts || accounts.length !== accountIds.length) {
+    return res.status(404).json({ error: 'One or more accounts not found or not owned by user' });
+  }
+
   const inserts = transactions.map(t => ({
     user_id: req.userId,
     account_id: t.account_id,
@@ -73,6 +85,10 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'account_id, type, amount, and occurred_at are required' });
   }
 
+  if (amount <= 0) {
+    return res.status(400).json({ error: 'Amount must be greater than zero' });
+  }
+
   if (['transfer_in', 'transfer_out'].includes(type)) {
     return res.status(400).json({ error: 'Transfers must be created via the account transfer endpoint' });
   }
@@ -83,6 +99,45 @@ router.post('/', async (req, res) => {
 
   if (type === 'goal_contribution' && !goal_id) {
     return res.status(400).json({ error: 'goal_id is required for goal_contribution' });
+  }
+
+  // Verify Account Ownership and Overdraft
+  const { data: account, error: accError } = await supabase
+    .from('accounts')
+    .select('id, current_balance')
+    .eq('id', account_id)
+    .eq('user_id', req.userId)
+    .single();
+
+  if (accError || !account) {
+    return res.status(404).json({ error: 'Account not found or not owned by user' });
+  }
+
+  if (['expense', 'debt_payment', 'goal_contribution'].includes(type)) {
+    if (account.current_balance < amount) {
+      return res.status(400).json({ error: 'Insufficient funds in account for this transaction' });
+    }
+  }
+
+  // Verify Item Ownership
+  if (item_id) {
+    const { data: item } = await supabase.from('items').select('id').eq('id', item_id).eq('user_id', req.userId).single();
+    if (!item) return res.status(404).json({ error: 'Item not found or not owned by user' });
+  }
+
+  // Verify Debt Ownership and Overpayment
+  if (debt_id) {
+    const { data: debt } = await supabase.from('debts').select('id, remaining_balance').eq('id', debt_id).eq('user_id', req.userId).single();
+    if (!debt) return res.status(404).json({ error: 'Debt not found or not owned by user' });
+    if (type === 'debt_payment' && debt.remaining_balance < amount) {
+      return res.status(400).json({ error: 'Payment exceeds remaining debt balance' });
+    }
+  }
+
+  // Verify Goal Ownership
+  if (goal_id) {
+    const { data: goal } = await supabase.from('goals').select('id').eq('id', goal_id).eq('user_id', req.userId).single();
+    if (!goal) return res.status(404).json({ error: 'Goal not found or not owned by user' });
   }
 
   const { data, error } = await supabase
