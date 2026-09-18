@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -12,6 +12,7 @@ import { useSupabaseAuth } from './hooks/useSupabaseAuth.js';
 import { useVersionCheck } from './hooks/useVersionCheck.js';
 import { useSubscriptions, useAccounts, useDebts } from './hooks/useBudget.js';
 import { requestNotificationPermissions, scheduleSubscriptionReminders, checkLowBalance, notifyDebtPaid } from './lib/notifications.js';
+import toast from './lib/haptics.js';
 import apiClient from './lib/apiClient.js';
 import Navbar from './components/Navbar.jsx';
 import AuthGuard from './components/AuthGuard.jsx';
@@ -38,25 +39,46 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
 });
 
+function SkeletonLoader() {
+  return (
+    <div className="page" style={{ padding: 'var(--space-6)', opacity: 0.6, width: '100%' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-6)' }}>
+        <div>
+          <div style={{ height: 28, width: 150, background: 'var(--color-surface-2)', borderRadius: 'var(--radius)', marginBottom: 8 }} />
+          <div style={{ height: 16, width: 220, background: 'var(--color-surface-2)', borderRadius: 'var(--radius)' }} />
+        </div>
+        <div style={{ height: 36, width: 90, background: 'var(--color-surface-2)', borderRadius: 'var(--radius-lg)' }} />
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+        {[1, 2, 3].map(i => (
+          <div key={i} style={{ height: 110, background: 'var(--color-surface-2)', borderRadius: 'var(--radius-lg)' }} />
+        ))}
+      </div>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+        {[1, 2, 3, 4, 5].map(i => (
+          <div key={i} style={{ height: 72, background: 'var(--color-surface-2)', borderRadius: 'var(--radius-lg)' }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Wraps each route so it fades + slides in/out */
 function PageWrapper({ children }) {
+  const navType = useNavigationType();
+  const isBack = navType === 'POP';
   return (
     <motion.div
+      custom={isBack}
       variants={pageVariants}
       initial="hidden"
       animate="visible"
       exit="exit"
-      style={{ minHeight: '100%' }}
+      style={{ minHeight: '100%', width: '100%' }}
     >
-      <Suspense fallback={
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 80px)' }}>
-          <motion.div
-            animate={{ scale: [0.9, 1.1, 0.9], opacity: [0.5, 1, 0.5] }}
-            transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
-            style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-primary)' }}
-          />
-        </div>
-      }>
+      <Suspense fallback={<SkeletonLoader />}>
         {children}
       </Suspense>
     </motion.div>
@@ -97,14 +119,31 @@ function NativeIntegration() {
     if (!Capacitor.isNativePlatform()) return;
     
     // Status Bar styling
+    StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
     StatusBar.setBackgroundColor({ color: '#13141c' }).catch(() => {});
     StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
     
+    let lastBackPress = 0;
+    
     // Back button handling
     const sub = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
-      // For simple routing we can just go back, if we're on the root path, exit.
-      if (window.location.pathname === '/' || window.location.pathname === '/login') {
-        CapacitorApp.exitApp();
+      // 1. Close open modal first
+      const modalOverlay = document.querySelector('.modal-overlay');
+      if (modalOverlay) {
+        modalOverlay.click();
+        return;
+      }
+      
+      // 2. Navigate back a route, or require double-tap to exit on root
+      const isRoot = window.location.pathname === '/' || window.location.pathname === '/login';
+      if (isRoot) {
+        const now = Date.now();
+        if (now - lastBackPress < 2000) {
+          CapacitorApp.exitApp();
+        } else {
+          lastBackPress = now;
+          toast.success('Press back again to exit', { duration: 2000, position: 'bottom-center' });
+        }
       } else {
         navigate(-1);
       }

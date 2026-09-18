@@ -5,12 +5,12 @@
 
 // ─── Page / Container ────────────────────────────────────────────────────────
 export const pageVariants = {
-  hidden:  { opacity: 0, x: 30 },
+  hidden: (isBack) => ({ opacity: 0, x: isBack ? -30 : 30 }),
   visible: {
     opacity: 1, x: 0,
     transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94], when: 'beforeChildren', staggerChildren: 0.07 }
   },
-  exit:    { opacity: 0, x: -30, transition: { duration: 0.2, ease: 'easeIn' } },
+  exit: (isBack) => ({ opacity: 0, x: isBack ? 30 : -30, transition: { duration: 0.2, ease: 'easeIn' } }),
 };
 
 // ─── Individual items (cards, rows, etc.) ────────────────────────────────────
@@ -37,9 +37,16 @@ export const backdropVariants = {
 };
 
 export const modalVariants = {
-  hidden:  { opacity: 0, scale: 0.93, y: 20 },
+  hidden: () => {
+    const isMobile = window.innerWidth <= 768;
+    return isMobile ? { opacity: 0, y: '100%' } : { opacity: 0, scale: 0.93, y: 20 };
+  },
   visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.28, ease: [0.34, 1.26, 0.64, 1] } },
-  exit:    { opacity: 0, scale: 0.95, y: 12, transition: { duration: 0.18, ease: 'easeIn' } },
+  exit: () => {
+    const isMobile = window.innerWidth <= 768;
+    return isMobile ? { opacity: 0, y: '100%', transition: { duration: 0.2, ease: 'easeIn' } } 
+                    : { opacity: 0, scale: 0.95, y: 12, transition: { duration: 0.18, ease: 'easeIn' } };
+  },
 };
 
 // ─── Slide-in from left (sidebar nav items) ──────────────────────────────────

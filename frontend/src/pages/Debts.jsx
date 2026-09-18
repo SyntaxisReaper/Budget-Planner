@@ -389,19 +389,31 @@ export default function Debts() {
                 </div>
 
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted">Remaining</span>
-                  <span className="font-bold text-danger">{fmt.format(debt.remaining_balance)}</span>
+                  <span className="text-muted">Remaining {fmt.format(debt.remaining_balance)}</span>
+                  <span className="text-muted text-xs">{(pct * 100).toFixed(0)}%</span>
                 </div>
-                <div className="progress-bar mb-3">
-                  <motion.div
-                    className="progress-fill accent"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${pct * 100}%` }}
-                    transition={{ duration: 0.8, delay: 0.2 + i * 0.07, ease: [0.25, 0.46, 0.45, 0.94] }}
-                  />
-                </div>
-                <div className="flex justify-between text-xs text-muted">
-                  <span>{Math.round(pct * 100)}% paid off</span>
+                <div style={{ padding: '0 16px', position: 'relative', height: '48px', background: 'var(--color-surface-2)', borderRadius: '24px', border: '1px dashed var(--color-border)', display: 'flex', alignItems: 'center' }} className="mb-3">
+                  <div style={{ position: 'absolute', right: '16px', fontSize: '20px', opacity: 0.5 }}>🏁</div>
+                  
+                  <div style={{ position: 'relative', flex: 1, height: '100%' }}>
+                    <motion.div
+                      initial={{ left: '0%' }}
+                      animate={{ left: `${pct * 100}%` }}
+                      transition={{ type: 'spring', stiffness: 40, damping: 12, delay: i * 0.1 }}
+                      style={{ position: 'absolute', top: '50%', marginTop: '-16px', marginLeft: '-16px', zIndex: 10 }}
+                    >
+                      <div style={{ width: '32px', height: '32px', background: 'var(--color-surface)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', fontSize: '16px' }}>
+                        🏎️
+                      </div>
+                    </motion.div>
+                    
+                    <motion.div
+                      initial={{ width: '0%' }}
+                      animate={{ width: `${pct * 100}%` }}
+                      transition={{ type: 'spring', stiffness: 40, damping: 12, delay: i * 0.1 }}
+                      style={{ position: 'absolute', top: '50%', left: 0, height: '6px', marginTop: '-3px', background: 'var(--color-primary)', borderRadius: '3px', opacity: 0.3 }}
+                    />
+                  </div>
                 </div>
               </motion.div>
             );

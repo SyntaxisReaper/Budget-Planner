@@ -287,7 +287,7 @@ export default function Settings() {
                 Get a local alert when any account drops below this amount. Leave blank to disable.
               </p>
               <input 
-                type="number"
+                type="number" inputMode="decimal"
                 inputMode="decimal"
                 value={lowBalanceThreshold}
                 onChange={(e) => setLowBalanceThreshold(e.target.value)}
