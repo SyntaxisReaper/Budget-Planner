@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../lib/apiClient.js';
 import toast from '../lib/haptics.js';
-import { Settings as SettingsIcon, Wallet, Calendar, RefreshCw, Download, Upload, Shield } from 'lucide-react';
+import { Settings as SettingsIcon, Wallet, Calendar, RefreshCw, Download, Upload, Shield, Bell } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { staggerContainer, itemVariants, fadeUp } from '../lib/motion.js';
 import { Capacitor } from '@capacitor/core';
@@ -27,6 +27,7 @@ export default function Settings() {
   });
 
   const [biometricEnabled, setBiometricEnabled] = useState(localStorage.getItem('biometricEnabled') === 'true');
+  const [lowBalanceThreshold, setLowBalanceThreshold] = useState(localStorage.getItem('low_balance_threshold') || '');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -55,11 +56,12 @@ export default function Settings() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    localStorage.setItem('low_balance_threshold', lowBalanceThreshold);
     updateSettings.mutate({
       current_balance: form.current_balance !== '' ? parseFloat(form.current_balance) : null,
       cycle_income: form.cycle_income !== '' ? parseFloat(form.cycle_income) : null,
       cycle_start_date: form.cycle_start_date || null,
-      cycle_days: parseInt(form.cycle_days, 10) || 30,
+      cycle_days: parseInt(form.cycle_days, 10),
     });
   };
 
@@ -272,6 +274,28 @@ export default function Settings() {
             </motion.button>
           </motion.div>
         </form>
+
+          <div className="card" style={{ marginBottom: 24 }}>
+            <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Bell size={20} color="var(--color-primary)" />
+              Notifications & Alerts
+            </h2>
+            
+            <div className="form-group">
+              <label>Low Balance Warning Threshold (₹)</label>
+              <p style={{ fontSize: '12px', color: 'var(--color-text-3)', margin: '0 0 8px' }}>
+                Get a local alert when any account drops below this amount. Leave blank to disable.
+              </p>
+              <input 
+                type="number"
+                inputMode="decimal"
+                value={lowBalanceThreshold}
+                onChange={(e) => setLowBalanceThreshold(e.target.value)}
+                placeholder="e.g. 1000"
+                className="input"
+              />
+            </div>
+          </div>
 
         {/* Security Section (Native Only) */}
         {Capacitor.isNativePlatform() && (
