@@ -193,6 +193,8 @@ export default function Transactions() {
   const [month, setMonth] = useState(new Date().toISOString().substring(0, 7));
   const [showModal, setShowModal] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
+  const [accountFilter, setAccountFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [parent] = useAutoAnimate();
 
   const { data: settings } = useSettings();
@@ -210,7 +212,29 @@ export default function Transactions() {
   const debts = debtsQuery.data?.filter(d => d.status === 'active') || [];
   const goals = goalsQuery.data || [];
   
-  const filtered = transactions.filter((t) => typeFilter === 'all' || t.type === typeFilter);
+  // Map entities for table display
+  const accountMap = useMemo(() => Object.fromEntries((accountsQuery.data || []).map(a => [a.id, a])), [accountsQuery.data]);
+  const itemMap = useMemo(() => Object.fromEntries(items.map(i => [i.id, i])), [items]);
+  const debtMap = useMemo(() => Object.fromEntries((debtsQuery.data || []).map(d => [d.id, d])), [debtsQuery.data]);
+  const goalMap = useMemo(() => Object.fromEntries(goals.map(g => [g.id, g])), [goals]);
+
+  const filtered = transactions.filter((t) => {
+    if (typeFilter !== 'all' && t.type !== typeFilter) return false;
+    if (accountFilter !== 'all' && t.account_id !== accountFilter) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matchNote = t.note?.toLowerCase().includes(q);
+      const matchUtr = t.utr_id?.toLowerCase().includes(q);
+      const targetName = (
+        (t.type === 'expense' && itemMap[t.item_id]?.name) ||
+        (t.type === 'debt_payment' && debtMap[t.debt_id]?.name) ||
+        (t.type === 'goal_contribution' && goalMap[t.goal_id]?.name) ||
+        ''
+      ).toLowerCase();
+      if (!matchNote && !matchUtr && !targetName.includes(q)) return false;
+    }
+    return true;
+  });
 
   // Quick summary for cycle
   const totalIncome = transactions.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
@@ -276,7 +300,7 @@ export default function Transactions() {
       {/* Filters */}
       <div className="card">
         <div className="flex items-center justify-between mb-5" style={{ flexWrap: 'wrap', gap: 'var(--space-4)' }}>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4" style={{ flexWrap: 'wrap' }}>
             <div className="flex items-center gap-2">
               <Filter size={14} color="var(--color-text-3)" />
               <span className="text-sm text-muted">Filters:</span>
@@ -293,6 +317,15 @@ export default function Transactions() {
               <option value="debt_payment">Debt / Rent Payment</option>
               <option value="goal_contribution">Goal Contribution</option>
             </select>
+            <select className="select" style={{ width: 'auto' }}
+              value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)}>
+              <option value="all">All accounts</option>
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <input type="text" className="input" placeholder="Search note, category, UTR..." style={{ minWidth: 250 }}
+              value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
         </div>
 
