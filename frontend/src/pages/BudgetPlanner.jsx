@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useBudget, useItems, useDebts, useGoals, useSettings } from '../hooks/useBudget.js';
+import { useBudget, useItems, useDebts, useGoals, useSubscriptions, useSettings } from '../hooks/useBudget.js';
 import { computeCycleBounds } from '../lib/dateUtils.js';
 import { motion } from 'framer-motion';
 import { fadeUp, itemVariants, staggerContainer } from '../lib/motion.js';
@@ -41,6 +41,7 @@ function AllocationRow({ type, entity, allocationsMap, onSave, onRemove }) {
         <div className="text-xs text-muted">
           {type === 'item' ? `Needs: ${fmt.format(entity.amount_needed)}` :
            type === 'debt' ? `Bal: ${fmt.format(entity.remaining_balance)}` :
+           type === 'subscription' ? `Cost: ${fmt.format(entity.amount)}` :
            `Goal: ${fmt.format(entity.target_amount)}`}
         </div>
       </div>
@@ -77,6 +78,7 @@ export default function BudgetPlanner() {
   const { query: itemsQuery } = useItems();
   const { query: debtsQuery } = useDebts();
   const { query: goalsQuery } = useGoals();
+  const { query: subsQuery } = useSubscriptions();
   const { data: settings } = useSettings();
 
   const { start: cycleStart, end: cycleEnd } = computeCycleBounds(month, settings?.data || settings);
@@ -85,6 +87,7 @@ export default function BudgetPlanner() {
   const items = itemsQuery.data || [];
   const debts = debtsQuery.data?.filter(d => d.status === 'active') || [];
   const goals = goalsQuery.data || [];
+  const subscriptions = subsQuery.data?.filter(s => s.status === 'active') || [];
 
   const allocationsMap = useMemo(() => {
     if (!budget?.allocations) return {};
@@ -147,6 +150,16 @@ export default function BudgetPlanner() {
               <AllocationRow key={`debt_${d.id}`} type="debt" entity={d} allocationsMap={allocationsMap} onSave={allocateMutation.mutateAsync} onRemove={removeAllocation.mutateAsync} />
             ))}
             {debts.length === 0 && <div className="text-muted text-sm">No active debts or rent.</div>}
+          </div>
+        </div>
+
+        <div>
+          <div className="section-title mb-4">🔄 Subscriptions</div>
+          <div className="flex flex-col gap-2">
+            {subscriptions.map(s => (
+              <AllocationRow key={`subscription_${s.id}`} type="subscription" entity={s} allocationsMap={allocationsMap} onSave={allocateMutation.mutateAsync} onRemove={removeAllocation.mutateAsync} />
+            ))}
+            {subscriptions.length === 0 && <div className="text-muted text-sm">No active subscriptions.</div>}
           </div>
         </div>
 
