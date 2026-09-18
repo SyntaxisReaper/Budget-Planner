@@ -220,7 +220,7 @@ export default function Transactions() {
   const { data: settings } = useSettings();
   const { start: cycleStart, end: cycleEnd } = computeCycleBounds(month, settings?.data || settings);
 
-  const { query: trainingQuery } = useCategorizationTrainingData();
+  const trainingQuery = useCategorizationTrainingData();
   const wordFreq = useMemo(() => trainCategorizer(trainingQuery.data), [trainingQuery.data]);
 
   const { query, create, remove } = useTransactions({ from: cycleStart, to: cycleEnd });
