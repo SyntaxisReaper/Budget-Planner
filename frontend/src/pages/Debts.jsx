@@ -345,10 +345,10 @@ export default function Debts() {
                 transition={{ delay: i * 0.07 }}
                 whileHover={hoverCard} whileTap={tapCard}
               >
-                <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <div className="font-bold" style={{ fontSize: 'var(--text-md)' }}>{debt.name}</div>
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
+                  <div className="w-full">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="font-bold" style={{ fontSize: 'var(--text-md)', wordBreak: 'break-word' }}>{debt.name}</div>
                       <span className={`badge ${debt.kind === 'rent' ? 'badge-primary' : 'badge-important'}`} style={{ fontSize: '0.65rem', padding: '2px 4px' }}>
                         {debt.kind.toUpperCase()}
                       </span>
@@ -356,19 +356,17 @@ export default function Debts() {
                     </div>
                     <div className="text-xs text-muted mt-1">
                       {debt.debt_date ? `Incurred: ${new Date(debt.debt_date).toLocaleDateString()}` : ''}
-                      {debt.interest_rate ? ` · ${debt.interest_rate}% APR` : ''}
-                      {debt.min_payment ? ` · Min ${fmt.format(debt.min_payment)}/mo` : ''}
                     </div>
-                    {debt.description && <div className="text-xs text-muted mt-1" style={{ fontStyle: 'italic' }}>{debt.description}</div>}
+                    {debt.description && <div className="text-xs text-muted mt-1" style={{ fontStyle: 'italic', wordBreak: 'break-word' }}>{debt.description}</div>}
                   </div>
-                  <div className="flex gap-2">
-                    <motion.button className="btn btn-accent btn-sm" onClick={() => setPayDebt(debt)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    <motion.button className="btn btn-accent btn-sm flex-1 sm:flex-none justify-center" onClick={() => setPayDebt(debt)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                       <DollarSign size={13} /> Pay
                     </motion.button>
-                    <motion.button className="btn btn-ghost btn-sm" onClick={() => setEditDebt(debt)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <motion.button className="btn btn-ghost btn-sm flex-1 sm:flex-none justify-center" onClick={() => setEditDebt(debt)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                       <Pencil size={13} /> Edit
                     </motion.button>
-                    <motion.button className="btn btn-danger btn-sm" onClick={() => handleDelete(debt.id)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <motion.button className="btn btn-danger btn-sm flex-1 sm:flex-none justify-center" onClick={() => handleDelete(debt.id)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                       Delete
                     </motion.button>
                   </div>
