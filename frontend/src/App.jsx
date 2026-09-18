@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -29,6 +29,8 @@ const BudgetPlanner = lazy(() => import('./pages/BudgetPlanner.jsx'));
 const Analytics = lazy(() => import('./pages/Analytics.jsx'));
 const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Subscriptions = lazy(() => import('./pages/Subscriptions.jsx'));
+const Profile = lazy(() => import('./pages/Profile.jsx'));
+const Notifications = lazy(() => import('./pages/Notifications.jsx'));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -75,10 +77,43 @@ function AnimatedRoutes() {
         <Route path="/analytics"    element={<PageWrapper><Analytics /></PageWrapper>} />
         <Route path="/settings"     element={<PageWrapper><Settings /></PageWrapper>} />
         <Route path="/subscriptions" element={<PageWrapper><Subscriptions /></PageWrapper>} />
+        <Route path="/profile"      element={<PageWrapper><Profile /></PageWrapper>} />
+        <Route path="/notifications" element={<PageWrapper><Notifications /></PageWrapper>} />
         <Route path="*"             element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>
   );
+}
+
+import { App as CapacitorApp } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
+
+function NativeIntegration() {
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    
+    // Status Bar styling
+    StatusBar.setBackgroundColor({ color: '#13141c' }).catch(() => {});
+    StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+    
+    // Back button handling
+    const sub = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      // For simple routing we can just go back, if we're on the root path, exit.
+      if (window.location.pathname === '/' || window.location.pathname === '/login') {
+        CapacitorApp.exitApp();
+      } else {
+        navigate(-1);
+      }
+    });
+    
+    return () => {
+      sub.then(listener => listener.remove());
+    };
+  }, [navigate]);
+
+  return null;
 }
 
 function AppShell() {
@@ -156,6 +191,7 @@ function AppShell() {
 
   return (
     <BrowserRouter>
+      <NativeIntegration />
       <Routes>
         <Route path="/login"  element={user ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/signup" element={user ? <Navigate to="/" replace /> : <Signup />} />

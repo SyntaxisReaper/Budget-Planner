@@ -3,7 +3,7 @@ import { TableVirtuoso } from 'react-virtuoso';
 import { Plus, Filter, ArrowRightLeft } from 'lucide-react';
 import { useTransactions, useItems, useAccounts, useDebts, useGoals, useSettings } from '../hooks/useBudget.js';
 import { computeCycleBounds } from '../lib/dateUtils.js';
-import toast from 'react-hot-toast';
+import toast from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants } from '../lib/motion.js';
@@ -114,7 +114,7 @@ function AddTransactionModal({ items, accounts, debts, goals, onClose, onCreate,
             </div>
             <div className="form-group">
               <label className="label">Amount (₹)</label>
-              <input type="number" className="input" step="0.01" min="0" placeholder="0.00" required
+              <input type="number" inputMode="decimal" className="input" step="0.01" min="0" placeholder="0.00" required
                 value={form.amount} onChange={(e) => set('amount', e.target.value)} />
             </div>
           </div>

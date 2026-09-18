@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, ReceiptText, ShoppingCart,
-  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Menu, Landmark, Repeat
+  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Landmark, Repeat, User, Bell
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { slideInLeft } from '../lib/motion.js';
@@ -20,34 +19,20 @@ const links = [
   { to: '/settings',     icon: SettingsIcon,    label: 'Settings'     },
 ];
 
+const bottomTabs = [
+  { to: '/',             icon: LayoutDashboard, label: 'Home'    },
+  { to: '/profile',      icon: User,            label: 'Profile'  },
+  { to: '/settings',     icon: SettingsIcon,    label: 'Settings' },
+  { to: '/debts',        icon: CreditCard,      label: 'Debts'    },
+  { to: '/notifications',icon: Bell,            label: 'Alerts'   },
+];
+
 export default function Navbar({ user, onSignOut }) {
-  const [isOpen, setIsOpen] = useState(false);
   const initials = user?.email?.slice(0, 2).toUpperCase() || 'ME';
 
   return (
     <>
-      {/* Mobile Topbar */}
-      <div className="mobile-topbar">
-        <div className="sidebar-logo" style={{ padding: 0, margin: 0 }}>
-          <div className="sidebar-logo-icon">
-            <Wallet size={18} color="#000" />
-          </div>
-          <div className="sidebar-logo-text">
-            Smart<span>Budget</span>
-          </div>
-        </div>
-        <button className="btn btn-icon btn-ghost" onClick={() => setIsOpen(true)}>
-          <Menu size={20} />
-        </button>
-      </div>
-
-      {/* Mobile Overlay */}
-      <div 
-        className={`sidebar-overlay ${isOpen ? 'open' : ''}`} 
-        onClick={() => setIsOpen(false)} 
-      />
-
-      <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+      <aside className="sidebar">
         {/* Logo */}
         <motion.div
           className="sidebar-logo"
@@ -81,7 +66,6 @@ export default function Navbar({ user, onSignOut }) {
               <NavLink
                 to={to}
                 end={to === '/'}
-                onClick={() => setIsOpen(false)}
                 className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
               >
                 <Icon size={16} className="nav-icon" />
@@ -121,6 +105,21 @@ export default function Navbar({ user, onSignOut }) {
           </div>
         </motion.div>
       </aside>
+
+      {/* Mobile Bottom Tab Bar */}
+      <nav className="bottom-tab-bar">
+        {bottomTabs.map(({ to, icon: Icon, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={to === '/'}
+            className={({ isActive }) => `bottom-tab-link${isActive ? ' active' : ''}`}
+          >
+            <Icon size={22} />
+            <span>{label}</span>
+          </NavLink>
+        ))}
+      </nav>
     </>
   );
 }

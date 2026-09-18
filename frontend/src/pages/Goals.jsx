@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useGoals } from '../hooks/useBudget.js';
 import GoalProgressCard from '../components/GoalProgressCard.jsx';
-import toast from 'react-hot-toast';
+import toast from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants } from '../lib/motion.js';
@@ -49,7 +49,7 @@ function GoalModal({ initial, onClose, onSave }) {
           </div>
           <div className="form-group">
             <label className="label">Target Amount (₹)</label>
-            <input id="goal-target" type="number" className="input" step="0.01" min="0" placeholder="5000.00" required
+            <input id="goal-target" type="number" inputMode="decimal" className="input" step="0.01" min="0" placeholder="5000.00" required
               value={form.target_amount} onChange={(e) => set('target_amount', e.target.value)} />
           </div>
           <div className="form-group">

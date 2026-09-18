@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import { staggerContainer, itemVariants, fadeUp } from '../lib/motion.js';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
-import toast from 'react-hot-toast';
+import toast from '../lib/haptics.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 

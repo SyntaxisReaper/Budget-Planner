@@ -3,7 +3,7 @@ import { useBudget, useItems, useDebts, useGoals, useSettings } from '../hooks/u
 import { computeCycleBounds } from '../lib/dateUtils.js';
 import { motion } from 'framer-motion';
 import { fadeUp, itemVariants, staggerContainer } from '../lib/motion.js';
-import toast from 'react-hot-toast';
+import toast from '../lib/haptics.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
@@ -47,8 +47,7 @@ function AllocationRow({ type, entity, allocationsMap, onSave, onRemove }) {
       
       <div className="flex gap-2 items-center" style={{ flex: '0 0 auto' }}>
         <div className="text-sm font-semibold">Allocated (₹)</div>
-        <input 
-          type="number" 
+        <input type="number" inputMode="decimal" 
           className="input" 
           style={{ width: 100, padding: '6px 10px', textAlign: 'right' }} 
           placeholder="0.00" 

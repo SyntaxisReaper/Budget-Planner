@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useItems } from '../hooks/useBudget.js';
-import toast from 'react-hot-toast';
+import toast from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants } from '../lib/motion.js';
@@ -72,7 +72,7 @@ function ItemModal({ initial, onClose, onSave, existingCategories }) {
           <div className="form-row">
             <div className="form-group">
               <label className="label">Amount Needed (₹)</label>
-              <input id="item-amount" type="number" className="input" step="0.01" min="0" placeholder="0.00" required
+              <input id="item-amount" type="number" inputMode="decimal" className="input" step="0.01" min="0" placeholder="0.00" required
                 value={form.amount_needed} onChange={(e) => set('amount_needed', e.target.value)} />
             </div>
             <div className="form-group">
