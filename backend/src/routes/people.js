@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { supabase } from '../lib/supabase.js';
-import { requireAuth } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
 // Get user's people ledger
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
   const { data, error } = await supabase
     .from('people_ledger')
     .select('*')
@@ -17,7 +17,7 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 // Add to ledger
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   const { person_name, amount, direction, note } = req.body;
   if (!person_name || amount === undefined || !direction) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -41,7 +41,7 @@ router.post('/', requireAuth, async (req, res) => {
 });
 
 // Update ledger entry
-router.put('/:id', requireAuth, async (req, res) => {
+router.put('/:id', authenticate, async (req, res) => {
   const { person_name, amount, direction, note, status } = req.body;
   
   const { data, error } = await supabase
@@ -57,7 +57,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 });
 
 // Delete ledger entry
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   const { error } = await supabase
     .from('people_ledger')
     .delete()
