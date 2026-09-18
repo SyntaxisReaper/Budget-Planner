@@ -103,7 +103,7 @@ export default function Goals() {
             {atRisk > 0 && <span style={{ color: 'var(--color-warning)', marginLeft: 8 }}>⚠️ {atRisk} at risk</span>}
           </p>
         </div>
-        <motion.button id="add-goal-btn" className="btn btn-primary" onClick={() => setModal('add')} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+        <motion.button id="add-goal-btn" className="btn btn-primary" onClick={() => setModal('add')} whileHover={{ scale: 1.04 }} whileTap={tapFeedback} onTapStart={impactLight}>
           <Plus size={16} /> Add Goal
         </motion.button>
       </motion.div>

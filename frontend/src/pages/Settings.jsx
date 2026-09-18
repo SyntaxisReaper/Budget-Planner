@@ -292,7 +292,7 @@ export default function Settings() {
               className="btn btn-primary"
               disabled={updateSettings.isPending}
               whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
+              whileTap={tapFeedback} onTapStart={impactLight}
             >
               {updateSettings.isPending ? <span className="spinner" /> : <>
                 <SettingsIcon size={15} /> Save Cycle Settings

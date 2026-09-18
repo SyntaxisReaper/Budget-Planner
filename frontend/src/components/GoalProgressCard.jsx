@@ -20,7 +20,7 @@ export default function GoalProgressCard({ goal, onEdit, onDelete }) {
       style={goal.at_risk ? { borderColor: 'rgba(245,158,11,0.3)' } : {}}
       variants={itemVariants}
       whileHover={hoverCard}
-      whileTap={tapCard}
+      whileTap={tapFeedback} onTapStart={impactLight}
       layout
     >
       {goal.at_risk && (
@@ -96,12 +96,12 @@ export default function GoalProgressCard({ goal, onEdit, onDelete }) {
 
       <div className="flex gap-2 mt-5">
         {onEdit && (
-          <motion.button id={`goal-edit-${goal.id}`} className="btn btn-ghost btn-sm" onClick={() => onEdit(goal)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <motion.button id={`goal-edit-${goal.id}`} className="btn btn-ghost btn-sm" onClick={() => onEdit(goal)} whileHover={{ scale: 1.05 }} whileTap={tapFeedback} onTapStart={impactLight}>
             Edit
           </motion.button>
         )}
         {onDelete && (
-          <motion.button id={`goal-delete-${goal.id}`} className="btn btn-danger btn-sm" onClick={() => onDelete(goal.id)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <motion.button id={`goal-delete-${goal.id}`} className="btn btn-danger btn-sm" onClick={() => onDelete(goal.id)} whileHover={{ scale: 1.05 }} whileTap={tapFeedback} onTapStart={impactLight}>
             Delete
           </motion.button>
         )}

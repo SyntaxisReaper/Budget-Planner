@@ -75,3 +75,4 @@ export const hoverCard = { scale: 1.015, transition: { duration: 0.18 } };
 export const tapCard   = { scale: 0.98  };
 export const hoverBtn  = { scale: 1.03,  transition: { duration: 0.15 } };
 export const tapBtn    = { scale: 0.96  };
+export const tapFeedback = { scale: 0.97, backgroundColor: 'var(--color-surface-2)' };

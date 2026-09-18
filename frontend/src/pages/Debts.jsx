@@ -307,7 +307,7 @@ export default function Debts() {
         <motion.button
           className="btn btn-primary"
           onClick={() => setShowAdd(true)}
-          whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+          whileHover={{ scale: 1.04 }} whileTap={tapFeedback} onTapStart={impactLight}
         >
           <Plus size={16} /> Add New
         </motion.button>
@@ -343,7 +343,7 @@ export default function Debts() {
                 variants={itemVariants}
                 initial="hidden" animate="visible"
                 transition={{ delay: i * 0.07 }}
-                whileHover={hoverCard} whileTap={tapCard}
+                whileHover={hoverCard} whileTap={tapFeedback} onTapStart={impactLight}
               >
                 <div className="flex items-start justify-between mb-4 gap-2">
                   <div className="flex items-start gap-3 min-w-0">

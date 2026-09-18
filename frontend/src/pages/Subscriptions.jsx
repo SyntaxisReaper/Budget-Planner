@@ -174,10 +174,10 @@ export default function Subscriptions() {
           <p className="page-subtitle">Manage recurring payments and automatic tracking</p>
         </div>
         <div className="flex gap-2">
-          <motion.button className="btn btn-ghost" onClick={handleForceProcess} disabled={isProcessing} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+          <motion.button className="btn btn-ghost" onClick={handleForceProcess} disabled={isProcessing} whileHover={{ scale: 1.04 }} whileTap={tapFeedback} onTapStart={impactLight}>
             {isProcessing ? <span className="spinner" /> : <><Repeat size={16} /> Process Overdue</>}
           </motion.button>
-          <motion.button className="btn btn-primary" onClick={() => setShowAdd(true)} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+          <motion.button className="btn btn-primary" onClick={() => setShowAdd(true)} whileHover={{ scale: 1.04 }} whileTap={tapFeedback} onTapStart={impactLight}>
             <Plus size={16} /> Add Sub
           </motion.button>
         </div>

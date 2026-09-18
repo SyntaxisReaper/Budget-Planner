@@ -295,7 +295,7 @@ export default function Transactions() {
               : 'The unified ledger for all balances'}
           </p>
         </div>
-        <motion.button className="btn btn-primary" onClick={() => setShowModal(true)} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+        <motion.button className="btn btn-primary" onClick={() => setShowModal(true)} whileHover={{ scale: 1.04 }} whileTap={tapFeedback} onTapStart={impactLight}>
           <Plus size={16} /> Log Transaction
         </motion.button>
       </motion.div>

@@ -236,7 +236,7 @@ export default function Signup() {
                     transition: { duration: 0.55, ease: 'easeInOut' }
                   } : { x: 0 }}
                   whileHover={!loading ? { scale: 1.02, transition: { duration: 0.15 } } : {}}
-                  whileTap={!loading ? { scale: 0.97 } : {}}
+                  whileTap={!loading ? tapFeedback : {}} onTapStart={!loading ? impactLight : undefined}
                   style={{ width: '100%', justifyContent: 'center', height: 48, fontSize: 15 }}
                 >
                   {loading ? (

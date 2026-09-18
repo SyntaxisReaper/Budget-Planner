@@ -213,7 +213,7 @@ export default function Items() {
           <h1 className="page-title">Items</h1>
           <p className="page-subtitle">Manage needs &amp; expense categories · Total needed: {fmt.format(totalNeeded)}</p>
         </div>
-        <motion.button id="add-item-btn" className="btn btn-primary" onClick={() => setModal('add')} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+        <motion.button id="add-item-btn" className="btn btn-primary" onClick={() => setModal('add')} whileHover={{ scale: 1.04 }} whileTap={tapFeedback} onTapStart={impactLight}>
           <Plus size={16} /> Add Item
         </motion.button>
       </motion.div>
