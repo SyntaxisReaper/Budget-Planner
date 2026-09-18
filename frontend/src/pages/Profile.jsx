@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
   Landmark, ReceiptText, ShoppingCart, Target, 
-  Calculator, BarChart3, Repeat, LogOut, ChevronRight, Plus, ArrowRightLeft, Sparkles
+  Calculator, BarChart3, Repeat, LogOut, ChevronRight, Plus, ArrowRightLeft, Sparkles, Users
 } from 'lucide-react';
 import { useSupabaseAuth } from '../hooks/useSupabaseAuth.js';
 import { useAccounts, useDebts } from '../hooks/useBudget.js';
@@ -18,6 +17,7 @@ const menuItems = [
   { to: '/items',         icon: ShoppingCart,    label: 'Items',         desc: 'Wishlist & stuff' },
   { to: '/goals',         icon: Target,          label: 'Goals',         desc: 'Saving targets' },
   { to: '/budget',        icon: Calculator,      label: 'Budget',        desc: 'Plan your budget' },
+  { to: '/people',        icon: Users,           label: 'People',        desc: 'Informal IOUs' },
   { to: '/analytics',     icon: BarChart3,       label: 'Analytics',     desc: 'Charts & reports' },
 ];
 

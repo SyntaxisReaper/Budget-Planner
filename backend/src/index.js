@@ -14,6 +14,7 @@ import dashboardRoutes from './routes/dashboard.js';
 import settingsRoutes from './routes/settings.js';
 import accountsRoutes from './routes/accounts.js';
 import subscriptionsRoutes from './routes/subscriptions.js';
+import peopleRoutes from './routes/people.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -47,6 +48,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/accounts', accountsRoutes);
 app.use('/api/subscriptions', subscriptionsRoutes);
+app.use('/api/people', peopleRoutes);
 
 // Global error handler
 app.use((err, _req, res, _next) => {

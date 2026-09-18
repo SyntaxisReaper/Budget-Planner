@@ -24,6 +24,8 @@ export default function Settings() {
     cycle_income: '',
     cycle_start_date: '',
     cycle_days: 30,
+    upi_vpa: '',
+    display_name: '',
   });
 
   const [biometricEnabled, setBiometricEnabled] = useState(localStorage.getItem('biometricEnabled') === 'true');
@@ -37,6 +39,8 @@ export default function Settings() {
         cycle_income: settings.cycle_income ?? '',
         cycle_start_date: settings.cycle_start_date ?? '',
         cycle_days: settings.cycle_days ?? 30,
+        upi_vpa: settings.upi_vpa ?? '',
+        display_name: settings.display_name ?? '',
       });
     }
   }, [settings]);
@@ -258,6 +262,26 @@ export default function Settings() {
               </div>
             </div>
           </motion.div>
+
+          <motion.section variants={fadeUp} className="bg-surface-2 p-6 rounded-2xl shadow-sm border border-border">
+            <h2 className="text-lg font-bold flex items-center gap-2 mb-4">
+              <span>💳</span> Payment Links (People Ledger)
+            </h2>
+            <div className="flex flex-col gap-4">
+              <div className="form-group">
+                <label className="label">Display Name</label>
+                <input type="text" className="input" placeholder="Name to show on payment links"
+                  value={form.display_name} onChange={(e) => set('display_name', e.target.value)} />
+                <p className="text-xs text-muted mt-1">E.g., "Ritesh"</p>
+              </div>
+              <div className="form-group">
+                <label className="label">UPI VPA</label>
+                <input type="text" className="input" placeholder="e.g. yourname@upi"
+                  value={form.upi_vpa} onChange={(e) => set('upi_vpa', e.target.value)} />
+                <p className="text-xs text-muted mt-1">Used to generate "Pay via UPI" buttons when people owe you money.</p>
+              </div>
+            </div>
+          </motion.section>
           </motion.div>
 
           <motion.div variants={itemVariants} initial="hidden" animate="visible" transition={{ delay: 0.3 }}>
