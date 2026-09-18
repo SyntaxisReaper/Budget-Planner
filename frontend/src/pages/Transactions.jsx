@@ -4,10 +4,10 @@ import { Plus, Filter, ArrowRightLeft } from 'lucide-react';
 import { useTransactions, useItems, useAccounts, useDebts, useGoals, useSettings, useCategorizationTrainingData } from '../hooks/useBudget.js';
 import { trainCategorizer, predictCategory } from '../lib/categorization.js';
 import { computeCycleBounds } from '../lib/dateUtils.js';
-import toast from '../lib/haptics.js';
+import toast, { impactLight } from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants } from '../lib/motion.js';
+import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants , tapFeedback } from '../lib/motion.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 

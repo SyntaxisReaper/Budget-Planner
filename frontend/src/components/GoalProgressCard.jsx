@@ -1,6 +1,7 @@
+import { impactLight } from '../lib/haptics.js';
 import { AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { itemVariants, hoverCard, tapCard } from '../lib/motion.js';
+import { itemVariants, hoverCard, tapCard , tapFeedback } from '../lib/motion.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 

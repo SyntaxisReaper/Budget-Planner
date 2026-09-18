@@ -1,3 +1,5 @@
+import { impactLight } from '../lib/haptics.js';
+import { tapFeedback } from '../lib/motion.js';
 import { useState } from 'react';
 import { useSupabaseAuth } from '../hooks/useSupabaseAuth.js';
 import { Wallet, AlertCircle, CheckCircle } from 'lucide-react';
