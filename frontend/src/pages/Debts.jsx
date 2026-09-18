@@ -364,7 +364,7 @@ export default function Debts() {
                   <div className="flex flex-col items-end gap-2 shrink-0">
                     <div className="flex gap-2">
                       <button className="btn btn-accent btn-sm" onClick={() => setPayDebt(debt)} title="Pay">
-                        <DollarSign size={14} /> Pay
+                        <DollarSign size={14} />
                       </button>
                       <button className="btn btn-ghost btn-sm" onClick={() => setEditDebt(debt)} title="Edit">
                         <Pencil size={14} />

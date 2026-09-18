@@ -200,10 +200,17 @@ export default function People() {
                     Mark Settled
                   </button>
                   {person.direction === 'lent' && (
-                    <button className="btn btn-sm btn-accent flex-1 flex justify-center gap-1" onClick={() => handleShare(person)}>
-                      <Share2 size={14} /> Request
+                    <button className="btn btn-sm flex-1 flex justify-center gap-1" style={{ backgroundColor: '#25D366', color: 'white', border: 'none' }} onClick={(e) => {
+                      e.preventDefault();
+                      const msg = `Hey! You owe me ${fmt.format(person.amount)}. You can pay here: ${window.location.origin}/pay/${person.id}`;
+                      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                    }}>
+                      <Share2 size={14} /> WhatsApp
                     </button>
                   )}
+                  <button className="btn btn-sm btn-accent flex-1 flex justify-center gap-1" onClick={() => handleShare(person)}>
+                    <Share2 size={14} /> Share
+                  </button>
                   <button className="btn btn-sm btn-danger btn-icon" onClick={() => handleDelete(person.id)}>
                     <Trash2 size={14} />
                   </button>
