@@ -302,11 +302,11 @@ img { display: block; max-width: 100%; }
     bottom: 0;
     left: 0;
     right: 0;
-    height: calc(65px + env(safe-area-inset-bottom, 0px));
-    background: rgba(19, 20, 28, 0.85); /* Slightly translucent */
+    height: calc(65px + env(safe-area-bottom, 0px));
+    background: color-mix(in srgb, var(--color-surface) 85%, transparent);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid var(--color-border);
     z-index: 400;
     justify-content: space-around;
     align-items: center;
