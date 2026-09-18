@@ -109,7 +109,8 @@ export default function People() {
       return;
     }
 
-    const link = `${window.location.origin}/pay/${person.id}`;
+    const baseUrl = import.meta.env.VITE_FRONTEND_URL || 'https://budget-planner-f5qb.onrender.com';
+    const link = `${baseUrl}/pay/${person.id}`;
     if (navigator.share) {
       try {
         await navigator.share({
@@ -202,7 +203,8 @@ export default function People() {
                   {person.direction === 'lent' && (
                     <button className="btn btn-sm flex-1 flex justify-center gap-1" style={{ backgroundColor: '#25D366', color: 'white', border: 'none' }} onClick={(e) => {
                       e.preventDefault();
-                      const msg = `Hey! You owe me ${fmt.format(person.amount)}. You can pay here: ${window.location.origin}/pay/${person.id}`;
+                      const baseUrl = import.meta.env.VITE_FRONTEND_URL || 'https://budget-planner-f5qb.onrender.com';
+                      const msg = `Hey! You owe me ${fmt.format(person.amount)}. You can pay here: ${baseUrl}/pay/${person.id}`;
                       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
                     }}>
                       <Share2 size={14} /> WhatsApp
