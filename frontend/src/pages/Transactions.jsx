@@ -240,12 +240,6 @@ export default function Transactions() {
   const totalIncome = transactions.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
   const totalExpenses = transactions.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
 
-  // Map entities for table display
-  const accountMap = useMemo(() => Object.fromEntries((accountsQuery.data || []).map(a => [a.id, a])), [accountsQuery.data]);
-  const itemMap = useMemo(() => Object.fromEntries(items.map(i => [i.id, i])), [items]);
-  const debtMap = useMemo(() => Object.fromEntries((debtsQuery.data || []).map(d => [d.id, d])), [debtsQuery.data]);
-  const goalMap = useMemo(() => Object.fromEntries(goals.map(g => [g.id, g])), [goals]);
-
   async function handleDelete(id) {
     if (!confirm('Delete this transaction? It will automatically reverse its effect on your account balance.')) return;
     try {
