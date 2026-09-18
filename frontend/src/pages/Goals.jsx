@@ -39,6 +39,9 @@ function GoalModal({ initial, onClose, onSave }) {
         className="modal"
         variants={modalVariants} initial="hidden" animate="visible" exit="exit"
         onClick={(e) => e.stopPropagation()}
+        drag={window.innerWidth <= 768 ? "y" : false}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        onDragEnd={(e, info) => { if (info.offset.y > 100) onClose(); }}
       >
         <h2 className="modal-title">{initial ? '✏️ Edit Goal' : '🎯 New Goal'}</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

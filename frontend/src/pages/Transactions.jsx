@@ -87,6 +87,9 @@ function AddTransactionModal({ items, accounts, debts, goals, onClose, onCreate,
         className="modal"
         variants={modalVariants} initial="hidden" animate="visible" exit="exit"
         onClick={(e) => e.stopPropagation()}
+        drag={window.innerWidth <= 768 ? "y" : false}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        onDragEnd={(e, info) => { if (info.offset.y > 100) onClose(); }}
       >
         <h2 className="modal-title">➕ Log Transaction</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

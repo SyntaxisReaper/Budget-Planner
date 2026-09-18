@@ -1,10 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../lib/apiClient.js';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
-const triggerHaptic = () => {
-  Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-};
+const triggerHaptic = () => {};
 
 export function useAccounts() {
   const queryClient = useQueryClient();
@@ -13,7 +10,6 @@ export function useAccounts() {
   const create = useMutation({
     mutationFn: (data) => apiClient.post('/accounts', data),
     onSuccess: () => {
-      triggerHaptic();
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
     }
   });

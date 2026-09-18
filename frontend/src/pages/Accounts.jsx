@@ -108,7 +108,9 @@ function SetBalanceModal({ account, onClose, onSave }) {
 
   return (
     <motion.div className="modal-overlay" variants={backdropVariants} initial="hidden" animate="visible" exit="exit" onClick={onClose}>
-      <motion.div className="modal" variants={modalVariants} initial="hidden" animate="visible" exit="exit" onClick={(e) => e.stopPropagation()}>
+      <motion.div className="modal" variants={modalVariants} initial="hidden" animate="visible" exit="exit" onClick={(e) => e.stopPropagation()}
+        drag={window.innerWidth <= 768 ? "y" : false} dragConstraints={{ top: 0, bottom: 0 }} onDragEnd={(e, info) => { if (info.offset.y > 100) onClose(); }}
+      >
         <h2 className="modal-title">⚖️ Set Balance</h2>
         <p className="text-sm text-muted mb-4">
           Directly set the balance for this account. Note: This will not be recorded as a transaction.
