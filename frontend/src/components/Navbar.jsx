@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, ReceiptText, ShoppingCart,
-  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Landmark, Repeat, User, Bell
+  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Landmark, Repeat, User, Bell, Plane
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { slideInLeft } from '../lib/motion.js';
@@ -14,6 +14,7 @@ const links = [
   { to: '/items',        icon: ShoppingCart,    label: 'Items'        },
   { to: '/debts',        icon: CreditCard,      label: 'Debts'        },
   { to: '/goals',        icon: Target,          label: 'Goals'        },
+  { to: '/trips',        icon: Plane,           label: 'Trips'        },
   { to: '/budget',       icon: Calculator,      label: 'Budget'       },
   { to: '/analytics',    icon: BarChart3,       label: 'Analytics'    },
   { to: '/settings',     icon: SettingsIcon,    label: 'Settings'     },
@@ -22,7 +23,7 @@ const links = [
 const bottomTabs = [
   { to: '/',             icon: LayoutDashboard, label: 'Home'    },
   { to: '/profile',      icon: User,            label: 'Profile'  },
-  { to: '/settings',     icon: SettingsIcon,    label: 'Settings' },
+  { to: '/trips',        icon: Plane,           label: 'Trips'    },
   { to: '/debts',        icon: CreditCard,      label: 'Debts'    },
   { to: '/notifications',icon: Bell,            label: 'Alerts'   },
 ];

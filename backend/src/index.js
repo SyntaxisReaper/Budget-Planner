@@ -15,6 +15,7 @@ import settingsRoutes from './routes/settings.js';
 import accountsRoutes from './routes/accounts.js';
 import subscriptionsRoutes from './routes/subscriptions.js';
 import peopleRoutes from './routes/people.js';
+import tripsRoutes from './routes/trips.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -49,6 +50,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/accounts', accountsRoutes);
 app.use('/api/subscriptions', subscriptionsRoutes);
 app.use('/api/people', peopleRoutes);
+app.use('/api/trips', tripsRoutes);
 
 // Global error handler
 app.use((err, _req, res, _next) => {

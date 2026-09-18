@@ -35,6 +35,8 @@ const Subscriptions = lazy(() => import('./pages/Subscriptions.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
 const Notifications = lazy(() => import('./pages/Notifications.jsx'));
 const People = lazy(() => import('./pages/People.jsx'));
+const Trips = lazy(() => import('./pages/Trips.jsx'));
+const TripDetail = lazy(() => import('./pages/TripDetail.jsx'));
 const PayLink = lazy(() => import('./pages/PayLink.jsx'));
 
 const queryClient = new QueryClient({
@@ -104,6 +106,8 @@ function AnimatedRoutes() {
         <Route path="/settings"     element={<PageWrapper><Settings /></PageWrapper>} />
         <Route path="/subscriptions" element={<PageWrapper><Subscriptions /></PageWrapper>} />
         <Route path="/people"       element={<PageWrapper><People /></PageWrapper>} />
+        <Route path="/trips"        element={<PageWrapper><Trips /></PageWrapper>} />
+        <Route path="/trips/:id"    element={<PageWrapper><TripDetail /></PageWrapper>} />
         <Route path="/profile"      element={<PageWrapper><Profile /></PageWrapper>} />
         <Route path="/notifications" element={<PageWrapper><Notifications /></PageWrapper>} />
         <Route path="*"             element={<Navigate to="/" replace />} />
