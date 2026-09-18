@@ -99,7 +99,7 @@ export default function Navbar({ user, onSignOut }) {
               title="Sign out"
               style={{ marginLeft: 'auto', padding: '6px' }}
               whileHover={{ scale: 1.15, color: 'var(--color-danger)' }}
-              whileTap={{ scale: 0.9 }}
+              whileTap={tapFeedback} onTapStart={impactLight}
             >
               <LogOut size={14} />
             </motion.button>

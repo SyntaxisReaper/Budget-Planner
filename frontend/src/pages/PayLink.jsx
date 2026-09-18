@@ -111,7 +111,7 @@ export default function PayLink() {
           className="btn btn-primary w-full py-4 text-lg font-bold shadow-lg shadow-primary/25"
           onClick={handlePayClick}
           whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileTap={tapFeedback} onTapStart={impactLight}
         >
           Pay via UPI
         </motion.button>

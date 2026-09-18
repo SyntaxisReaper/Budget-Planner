@@ -173,7 +173,7 @@ export default function Accounts() {
           <h1 className="page-title">Accounts</h1>
           <p className="page-subtitle">Manage your bank and cash accounts · Total Balance: {fmt.format(totalBalance)}</p>
         </div>
-        <motion.button className="btn btn-primary" onClick={() => setModal('add')} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+        <motion.button className="btn btn-primary" onClick={() => setModal('add')} whileHover={{ scale: 1.04 }} whileTap={tapFeedback} onTapStart={impactLight}>
           <Plus size={16} /> Add Account
         </motion.button>
       </motion.div>
