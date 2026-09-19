@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CurrencyInput from '../components/CurrencyInput.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import { useQueryClient } from '@tanstack/react-query';
-import { useUndoableAction } from '../hooks/useUndo.js';
+import { useUndoableAction } from '../hooks/useUndo.jsx';
 import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants, hoverCard, tapCard , tapFeedback } from '../lib/motion.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
