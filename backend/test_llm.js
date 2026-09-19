@@ -1,21 +1,15 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-process.env.GEMINI_API_KEY = "dummy";
+process.env.GEMINI_API_KEY = "dummy_key";
 const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 try {
-  const chat = ai.getGenerativeModel({ model: 'gemini-1.5-flash' }).startChat();
-  console.log("startChat ok");
+  const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const chat = model.startChat();
   
-  // mock response
-  const response = {
-    response: {
-      functionCalls: () => [],
-      text: () => "Hello"
-    }
-  };
-  
-  console.log("Type of functionCalls:", typeof response.response.functionCalls);
-} catch(e) {
-  console.error("err:", e);
+  await chat.sendMessage("test").catch(e => {
+    console.error("SendMessage Error:", e.message);
+  });
+} catch (e) {
+  console.error("Create Error:", e.message);
 }
