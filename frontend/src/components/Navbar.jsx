@@ -1,35 +1,60 @@
+import { useState } from 'react';
 import { impactLight } from '../lib/haptics.js';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, ReceiptText, ShoppingCart,
-  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Landmark, Repeat, User, Bell, Plane
+  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Landmark, Repeat, User, Bell, Plane, Calendar, CheckSquare, FileText, Users, Grid, X
 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { slideInLeft , tapFeedback } from '../lib/motion.js';
+import { motion, AnimatePresence } from 'framer-motion';
+import { slideInLeft, tapFeedback, backdropVariants, modalVariants } from '../lib/motion.js';
 
-const links = [
-  { to: '/',             icon: LayoutDashboard, label: 'Dashboard'    },
-  { to: '/accounts',     icon: Landmark,        label: 'Accounts'     },
-  { to: '/transactions', icon: ReceiptText,     label: 'Transactions' },
-  { to: '/subscriptions',icon: Repeat,          label: 'Subscriptions'},
-  { to: '/items',        icon: ShoppingCart,    label: 'Items'        },
-  { to: '/debts',        icon: CreditCard,      label: 'Debts'        },
-  { to: '/goals',        icon: Target,          label: 'Goals'        },
-  { to: '/trips',        icon: Plane,           label: 'Trips'        },
-  { to: '/budget',       icon: Calculator,      label: 'Budget'       },
-  { to: '/analytics',    icon: BarChart3,       label: 'Analytics'    },
-  { to: '/settings',     icon: SettingsIcon,    label: 'Settings'     },
+const navGroups = [
+  {
+    title: 'Finance',
+    links: [
+      { to: '/',             icon: LayoutDashboard, label: 'Dashboard'    },
+      { to: '/accounts',     icon: Landmark,        label: 'Accounts'     },
+      { to: '/transactions', icon: ReceiptText,     label: 'Transactions' },
+      { to: '/subscriptions',icon: Repeat,          label: 'Subscriptions'},
+      { to: '/people-ledger',icon: Users,           label: 'IOUs'         },
+      { to: '/analytics',    icon: BarChart3,       label: 'Analytics'    },
+    ]
+  },
+  {
+    title: 'Life',
+    links: [
+      { to: '/trips',        icon: Plane,           label: 'Trips'        },
+      { to: '/debts',        icon: CreditCard,      label: 'Debts'        },
+      { to: '/goals',        icon: Target,          label: 'Goals'        },
+      { to: '/items',        icon: ShoppingCart,    label: 'Items'        },
+    ]
+  },
+  {
+    title: 'Assistant',
+    links: [
+      { to: '/calendar',     icon: Calendar,        label: 'Calendar'     },
+      { to: '/tasks',        icon: CheckSquare,     label: 'Tasks'        },
+      { to: '/notes',        icon: FileText,        label: 'Notes'        },
+      { to: '/contacts',     icon: Users,           label: 'Contacts'     },
+    ]
+  },
+  {
+    title: 'System',
+    links: [
+      { to: '/settings',     icon: SettingsIcon,    label: 'Settings'     },
+    ]
+  }
 ];
 
 const bottomTabs = [
   { to: '/',             icon: LayoutDashboard, label: 'Home'    },
-  { to: '/profile',      icon: User,            label: 'Profile'  },
-  { to: '/trips',        icon: Plane,           label: 'Trips'    },
-  { to: '/debts',        icon: CreditCard,      label: 'Debts'    },
-  { to: '/notifications',icon: Bell,            label: 'Alerts'   },
+  { to: '/calendar',     icon: Calendar,        label: 'Calendar'},
+  { to: '/tasks',        icon: CheckSquare,     label: 'Tasks'   },
+  { to: '/debts',        icon: CreditCard,      label: 'Debts'   },
 ];
 
 export default function Navbar({ user, onSignOut }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const initials = user?.email?.slice(0, 2).toUpperCase() || 'ME';
 
   return (
@@ -55,25 +80,29 @@ export default function Navbar({ user, onSignOut }) {
         </motion.div>
 
         {/* Nav links */}
-        <nav className="sidebar-nav">
-          <div className="sidebar-section-label">Menu</div>
-          {links.map(({ to, icon: Icon, label }, i) => (
-            <motion.div
-              key={to}
-              custom={i}
-              variants={slideInLeft}
-              initial="hidden"
-              animate="visible"
-            >
-              <NavLink
-                to={to}
-                end={to === '/'}
-                className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
-              >
-                <Icon size={16} className="nav-icon" />
-                {label}
-              </NavLink>
-            </motion.div>
+        <nav className="sidebar-nav" style={{ overflowY: 'auto', paddingBottom: '20px' }}>
+          {navGroups.map((group, gIdx) => (
+            <div key={group.title} style={{ marginBottom: '16px' }}>
+              <div className="sidebar-section-label">{group.title}</div>
+              {group.links.map(({ to, icon: Icon, label }, i) => (
+                <motion.div
+                  key={to}
+                  custom={gIdx * 4 + i}
+                  variants={slideInLeft}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <NavLink
+                    to={to}
+                    end={to === '/'}
+                    className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+                  >
+                    <Icon size={16} className="nav-icon" />
+                    {label}
+                  </NavLink>
+                </motion.div>
+              ))}
+            </div>
           ))}
         </nav>
 
@@ -116,12 +145,70 @@ export default function Navbar({ user, onSignOut }) {
             to={to}
             end={to === '/'}
             className={({ isActive }) => `bottom-tab-link${isActive ? ' active' : ''}`}
+            onClick={() => setMobileMenuOpen(false)}
           >
             <Icon size={22} />
             <span>{label}</span>
           </NavLink>
         ))}
+        <button 
+          className={`bottom-tab-link ${mobileMenuOpen ? 'active' : ''}`}
+          onClick={() => {
+            impactLight();
+            setMobileMenuOpen(true);
+          }}
+        >
+          <Grid size={22} />
+          <span>Menu</span>
+        </button>
       </nav>
+
+      {/* Mobile Fullscreen Menu */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            className="mobile-full-menu"
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            style={{
+              position: 'fixed',
+              top: 0, left: 0, right: 0, bottom: '64px',
+              backgroundColor: 'var(--color-surface)',
+              zIndex: 90,
+              overflowY: 'auto',
+              padding: '24px 16px',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Menu</h2>
+              <button onClick={() => setMobileMenuOpen(false)} className="btn btn-icon btn-ghost"><X size={20}/></button>
+            </div>
+
+            {navGroups.map((group) => (
+              <div key={group.title} style={{ marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{group.title}</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  {group.links.map(({ to, icon: Icon, label }) => (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={to === '/'}
+                      className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                      style={{ padding: '12px', borderRadius: '12px', backgroundColor: 'var(--color-surface-2)' }}
+                    >
+                      <Icon size={18} className="nav-icon" />
+                      {label}
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

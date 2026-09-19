@@ -4,6 +4,10 @@ import { useDebts, useAccounts, useTransactions } from '../hooks/useBudget.js';
 import toast, { impactLight } from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import CurrencyInput from '../components/CurrencyInput.jsx';
+import EmptyState from '../components/EmptyState.jsx';
+import { useQueryClient } from '@tanstack/react-query';
+import { useUndoableAction } from '../hooks/useUndo.js';
 import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants, hoverCard, tapCard , tapFeedback } from '../lib/motion.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
@@ -81,8 +85,7 @@ function AddDebtModal({ onClose, onCreate }) {
         <div className="form-row">
           <div className="form-group">
             <label className="label">Amount (₹)</label>
-            <input type="number" inputMode="decimal" className="input" step="0.01" min="0" placeholder="0.00" required
-              value={form.principal} onChange={(e) => set('principal', e.target.value)} />
+            <CurrencyInput className="input text-xl font-bold" placeholder="0.00" value={form.principal} onChange={(v) => set('principal', v)} required />
           </div>
           <div className="form-group">
             <label className="label">Priority</label>
@@ -241,8 +244,7 @@ function LogPaymentModal({ debt, accounts, onClose, onLog }) {
         <div className="form-row">
           <div className="form-group">
             <label className="label">Amount (₹)</label>
-            <input type="number" inputMode="decimal" className="input" step="0.01" min="0" placeholder="0.00" required
-              value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} autoFocus />
+            <CurrencyInput className="input text-xl font-bold" placeholder="0.00" value={form.amount} onChange={(v) => setForm((p) => ({ ...p, amount: v }))} required autoFocus />
           </div>
           <div className="form-group">
             <label className="label">Date & Time</label>
@@ -276,6 +278,8 @@ function LogPaymentModal({ debt, accounts, onClose, onLog }) {
 }
 
 export default function Debts() {
+  const queryClient = useQueryClient();
+  const { executeUndoable } = useUndoableAction();
   const { query, create, update, remove } = useDebts();
   const { query: accountsQuery } = useAccounts();
   const { create: createTxn } = useTransactions({});
@@ -292,9 +296,10 @@ export default function Debts() {
   const totalRemaining = active.reduce((s, d) => s + Number(d.remaining_balance), 0);
 
   async function handleDelete(id) {
-    if (!confirm('Delete this? It will NOT reverse any transactions already made.')) return;
-    try { await remove.mutateAsync(id); toast.success('Deleted'); }
-    catch (err) { toast.error(err.message); }
+    executeUndoable(id, ['debts'], async (tid) => {
+      await remove.mutateAsync(tid);
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    }, 'Record deleted');
   }
 
   return (
@@ -331,9 +336,13 @@ export default function Debts() {
         {/* Debt cards */}
         <div ref={parent} className="flex flex-col gap-4">
           {active.length === 0 && (
-            <motion.div className="card empty-state" variants={itemVariants} initial="hidden" animate="visible">
-              <p>No active debts or rent due. Great job or add one above!</p>
-            </motion.div>
+            <EmptyState 
+              icon={Banknote} 
+              title="No Debts" 
+              message="You don't have any active debts or rent logs."
+              actionLabel="Add One"
+              onAction={() => setShowAdd(true)}
+            />
           )}
           {active.map((debt, i) => {
             const pct = 1 - (Number(debt.remaining_balance) / Number(debt.principal));

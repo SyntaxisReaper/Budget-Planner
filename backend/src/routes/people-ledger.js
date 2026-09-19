@@ -8,7 +8,7 @@ const router = Router();
 router.get('/', authenticate, async (req, res) => {
   const { data, error } = await supabase
     .from('people_ledger')
-    .select('*')
+    .select('*, people(name)')
     .eq('user_id', req.user.id)
     .order('created_at', { ascending: false });
 
@@ -18,8 +18,8 @@ router.get('/', authenticate, async (req, res) => {
 
 // Add to ledger
 router.post('/', authenticate, async (req, res) => {
-  const { person_name, amount, direction, note } = req.body;
-  if (!person_name || amount === undefined || !direction) {
+  const { person_id, amount, direction, note } = req.body;
+  if (!person_id || amount === undefined || !direction) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
@@ -27,13 +27,13 @@ router.post('/', authenticate, async (req, res) => {
     .from('people_ledger')
     .insert([{ 
       user_id: req.user.id, 
-      person_name, 
+      person_id, 
       amount, 
       direction, 
       note,
       status: 'active'
     }])
-    .select()
+    .select('*, people(name)')
     .single();
 
   if (error) throw error;
@@ -42,14 +42,14 @@ router.post('/', authenticate, async (req, res) => {
 
 // Update ledger entry
 router.put('/:id', authenticate, async (req, res) => {
-  const { person_name, amount, direction, note, status } = req.body;
+  const { person_id, amount, direction, note, status } = req.body;
   
   const { data, error } = await supabase
     .from('people_ledger')
-    .update({ person_name, amount, direction, note, status })
+    .update({ person_id, amount, direction, note, status })
     .eq('id', req.params.id)
     .eq('user_id', req.user.id)
-    .select()
+    .select('*, people(name)')
     .single();
 
   if (error) throw error;
@@ -73,7 +73,7 @@ router.get('/:id/public', async (req, res) => {
   // Use service role since public anon SELECT might not be configured yet via SQL in all environments
   const { data, error } = await supabase
     .from('people_ledger')
-    .select('id, user_id, person_name, amount, direction, note, status, created_at')
+    .select('id, user_id, person_id, amount, direction, note, status, created_at, people(name)')
     .eq('id', req.params.id)
     .single();
 

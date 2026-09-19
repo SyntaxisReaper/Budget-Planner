@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useBudget, useItems, useDebts, useGoals, useSubscriptions, useSettings } from '../hooks/useBudget.js';
 import { computeCycleBounds } from '../lib/dateUtils.js';
 import { motion } from 'framer-motion';
-import { fadeUp, itemVariants, staggerContainer } from '../lib/motion.js';
+import { staggerContainer, itemVariants, fadeUp } from '../lib/motion.js';
+import CurrencyInput from '../components/CurrencyInput.jsx';
 import toast from '../lib/haptics.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
@@ -48,12 +49,12 @@ function AllocationRow({ type, entity, allocationsMap, onSave, onRemove }) {
       
       <div className="flex gap-2 items-center" style={{ flex: '0 0 auto' }}>
         <div className="text-sm font-semibold">Allocated (₹)</div>
-        <input type="number" inputMode="decimal" 
+        <CurrencyInput
           className="input" 
           style={{ width: 100, padding: '6px 10px', textAlign: 'right' }} 
           placeholder="0.00" 
           value={val} 
-          onChange={e => setVal(e.target.value)}
+          onChange={setVal}
           onBlur={handleBlur}
         />
       </div>

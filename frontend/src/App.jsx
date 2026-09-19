@@ -10,13 +10,14 @@ import { Lock } from 'lucide-react';
 
 import { useSupabaseAuth } from './hooks/useSupabaseAuth.js';
 import { useVersionCheck } from './hooks/useVersionCheck.js';
-import { useSubscriptions, useAccounts, useDebts } from './hooks/useBudget.js';
-import { requestNotificationPermissions, scheduleSubscriptionReminders, checkLowBalance, notifyDebtPaid } from './lib/notifications.js';
-import toast from './lib/haptics.js';
+import { useSubscriptions, useAccounts, useDebts, useTrips } from './hooks/useBudget.js';
+import { requestNotificationPermissions, scheduleUpcomingReminders, checkLowBalance, notifyDebtPaid } from './lib/notifications.js';
+import toast, { triggerCelebration } from './lib/haptics.js';
 import apiClient from './lib/apiClient.js';
 import Navbar from './components/Navbar.jsx';
 import AuthGuard from './components/AuthGuard.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import OfflineBanner from './components/OfflineBanner.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import { pageVariants } from './lib/motion.js';
@@ -34,7 +35,11 @@ const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Subscriptions = lazy(() => import('./pages/Subscriptions.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
 const Notifications = lazy(() => import('./pages/Notifications.jsx'));
-const People = lazy(() => import('./pages/People.jsx'));
+const PeopleLedger = lazy(() => import('./pages/PeopleLedger.jsx'));
+const Tasks = lazy(() => import('./pages/Tasks.jsx'));
+const Notes = lazy(() => import('./pages/Notes.jsx'));
+const Calendar = lazy(() => import('./pages/Calendar.jsx'));
+const Contacts = lazy(() => import('./pages/Contacts.jsx'));
 const Trips = lazy(() => import('./pages/Trips.jsx'));
 const TripDetail = lazy(() => import('./pages/TripDetail.jsx'));
 const PayLink = lazy(() => import('./pages/PayLink.jsx'));
@@ -105,7 +110,11 @@ function AnimatedRoutes() {
         <Route path="/analytics"    element={<PageWrapper><Analytics /></PageWrapper>} />
         <Route path="/settings"     element={<PageWrapper><Settings /></PageWrapper>} />
         <Route path="/subscriptions" element={<PageWrapper><Subscriptions /></PageWrapper>} />
-        <Route path="/people"       element={<PageWrapper><People /></PageWrapper>} />
+        <Route path="/contacts"     element={<PageWrapper><Contacts /></PageWrapper>} />
+        <Route path="/people-ledger" element={<PageWrapper><PeopleLedger /></PageWrapper>} />
+        <Route path="/tasks"        element={<PageWrapper><Tasks /></PageWrapper>} />
+        <Route path="/notes"        element={<PageWrapper><Notes /></PageWrapper>} />
+        <Route path="/calendar"     element={<PageWrapper><Calendar /></PageWrapper>} />
         <Route path="/trips"        element={<PageWrapper><Trips /></PageWrapper>} />
         <Route path="/trips/:id"    element={<PageWrapper><TripDetail /></PageWrapper>} />
         <Route path="/profile"      element={<PageWrapper><Profile /></PageWrapper>} />
@@ -168,10 +177,12 @@ function NotificationManager() {
   const { query: subQuery } = useSubscriptions();
   const { query: accQuery } = useAccounts();
   const { query: debtQuery } = useDebts();
+  const { query: tripQuery } = useTrips();
   
   const subscriptions = subQuery.data;
   const accounts = accQuery.data;
   const debts = debtQuery.data;
+  const trips = tripQuery.data;
 
   // Track notified states to prevent spam
   const [notifiedLowAccounts, setNotifiedLowAccounts] = useState(new Set());
@@ -184,10 +195,10 @@ function NotificationManager() {
   }, []);
 
   useEffect(() => {
-    if (subscriptions && subscriptions.length > 0) {
-      scheduleSubscriptionReminders(subscriptions);
+    if (subscriptions && debts && trips) {
+      scheduleUpcomingReminders(subscriptions, debts, trips);
     }
-  }, [subscriptions]);
+  }, [subscriptions, debts, trips]);
 
   useEffect(() => {
     if (accounts) {
@@ -223,7 +234,8 @@ function NotificationManager() {
       debts.forEach(debt => {
         if (debt.remaining_balance <= 0 && debt.total_amount > 0) {
           if (!notifiedPaidDebts.has(debt.id)) {
-            notifyDebtPaid(debt.creditor);
+            triggerCelebration();
+            notifyDebtPaid(debt.name);
             setNotifiedPaidDebts(prev => new Set(prev).add(debt.id));
           }
         } else {
@@ -327,6 +339,8 @@ function AppShell() {
           element={
             <AuthGuard user={user}>
               <div className="app-shell">
+                <OfflineBanner />
+                <NotificationManager />
                 <Navbar user={user} onSignOut={signOut} />
                 <main className="main-content">
                   <ErrorBoundary>

@@ -288,33 +288,197 @@ export function useSubscriptions() {
   return { query, create, update, remove, processAll };
 }
 
-export function usePeople() {
+export function usePeopleLedger() {
   const queryClient = useQueryClient();
-  const query = useQuery({ queryKey: ['people'], queryFn: () => apiClient.get('/people') });
+  const query = useQuery({ queryKey: ['peopleLedger'], queryFn: () => apiClient.get('/people-ledger') });
 
   const create = useMutation({
-    mutationFn: (data) => apiClient.post('/people', data),
+    mutationFn: (data) => apiClient.post('/people-ledger', data),
     onSuccess: () => {
       triggerHaptic();
-      queryClient.invalidateQueries({ queryKey: ['people'] });
+      queryClient.invalidateQueries({ queryKey: ['peopleLedger'] });
     }
   });
 
   const update = useMutation({
-    mutationFn: ({ id, ...data }) => apiClient.put(`/people/${id}`, data),
+    mutationFn: ({ id, ...data }) => apiClient.put(`/people-ledger/${id}`, data),
     onSuccess: () => {
       triggerHaptic();
-      queryClient.invalidateQueries({ queryKey: ['people'] });
+      queryClient.invalidateQueries({ queryKey: ['peopleLedger'] });
     }
   });
 
   const remove = useMutation({
-    mutationFn: (id) => apiClient.delete(`/people/${id}`),
+    mutationFn: (id) => apiClient.delete(`/people-ledger/${id}`),
     onSuccess: () => {
       triggerHaptic();
-      queryClient.invalidateQueries({ queryKey: ['people'] });
+      queryClient.invalidateQueries({ queryKey: ['peopleLedger'] });
     }
   });
 
   return { query, create, update, remove };
+}
+
+export function useContacts() {
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['contacts'], queryFn: () => apiClient.get('/people') });
+
+  const create = useMutation({
+    mutationFn: (data) => apiClient.post('/people', data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contacts'] }),
+  });
+
+  const update = useMutation({
+    mutationFn: ({ id, ...data }) => apiClient.put(/people/, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contacts'] }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id) => apiClient.delete(/people/),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contacts'] }),
+  });
+
+  return { query, create, update, remove };
+}
+
+export function useTasks() {
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['tasks'], queryFn: () => apiClient.get('/tasks') });
+
+  const create = useMutation({
+    mutationFn: (data) => apiClient.post('/tasks', data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+
+  const update = useMutation({
+    mutationFn: ({ id, ...data }) => apiClient.put(/tasks/, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id) => apiClient.delete(/tasks/),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+
+  return { query, create, update, remove };
+}
+
+export function useNotes() {
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['notes'], queryFn: () => apiClient.get('/notes') });
+
+  const create = useMutation({
+    mutationFn: (data) => apiClient.post('/notes', data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notes'] }),
+  });
+
+  const update = useMutation({
+    mutationFn: ({ id, ...data }) => apiClient.put(/notes/, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notes'] }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id) => apiClient.delete(/notes/),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notes'] }),
+  });
+
+  return { query, create, update, remove };
+}
+
+export function useLinks(params = {}) {
+  const queryClient = useQueryClient();
+  const query = useQuery({ 
+    queryKey: ['links', params], 
+    queryFn: () => apiClient.get('/links', { params }) 
+  });
+
+  const create = useMutation({
+    mutationFn: (data) => apiClient.post('/links', data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['links'] }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id) => apiClient.delete(/links/),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['links'] }),
+  });
+
+  return { query, create, remove };
+}
+
+
+export function useCalendarEvents() {
+  const query = useQuery({
+    queryKey: ['calendarEvents'],
+    queryFn: async () => {
+      const [debts, subs, trips, tasks] = await Promise.all([
+        apiClient.get('/debts'),
+        apiClient.get('/subscriptions'),
+        apiClient.get('/trips'),
+        apiClient.get('/tasks')
+      ]);
+
+      const events = [];
+
+      // Add tasks
+      (tasks?.data || []).forEach(t => {
+        if (t.due_date) {
+          events.push({
+            id: `task-${t.id}`,
+            type: 'task',
+            title: t.title,
+            date: t.due_date,
+            status: t.status,
+            originalId: t.id
+          });
+        }
+      });
+
+      // Add trips
+      (trips?.data || []).forEach(t => {
+        if (t.start_date) {
+          events.push({
+            id: `trip-${t.id}-start`,
+            type: 'trip',
+            title: `Trip: ${t.name}`,
+            date: t.start_date,
+            originalId: t.id
+          });
+        }
+      });
+
+      // Add subscriptions (these usually repeat, for now we just show next billing date if present)
+      (subs?.data || []).forEach(s => {
+        if (s.next_billing_date) {
+          events.push({
+            id: `sub-${s.id}`,
+            type: 'subscription',
+            title: s.name,
+            date: s.next_billing_date,
+            amount: s.amount,
+            originalId: s.id
+          });
+        }
+      });
+
+      // Add debts due dates
+      (debts?.data || []).forEach(d => {
+        if (d.due_date) {
+          events.push({
+            id: `debt-${d.id}`,
+            type: 'debt',
+            title: d.name,
+            date: d.due_date,
+            amount: d.amount,
+            originalId: d.id
+          });
+        }
+      });
+
+      // Sort chronological
+      events.sort((a, b) => new Date(a.date) - new Date(b.date));
+      return events;
+    }
+  });
+
+  return { query };
 }

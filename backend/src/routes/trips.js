@@ -41,13 +41,29 @@ router.post('/', async (req, res) => {
 
     if (tripError) return res.status(500).json({ error: tripError.message });
 
+    // Helper to get or create person
+    async function getOrCreatePerson(userId, name) {
+        let { data } = await supabase.from('people').select('id').eq('user_id', userId).eq('name', name).single();
+        if (!data) {
+            const { data: newPerson } = await supabase.from('people').insert({ user_id: userId, name }).select('id').single();
+            return newPerson.id;
+        }
+        return data.id;
+    }
+
     // Add owner participant
     const ownerName = type === 'solo' ? 'Me' : 'Me';
-    let partsToInsert = [{ trip_id: trip.id, name: ownerName, is_owner: true }];
+    const meId = await getOrCreatePerson(req.userId, ownerName);
+    let partsToInsert = [{ trip_id: trip.id, person_id: meId, is_owner: true }];
     
     if (type === 'group' && Array.isArray(participants)) {
-        const others = participants.map(p => ({ trip_id: trip.id, name: p.name, is_owner: false }));
-        partsToInsert = partsToInsert.concat(others);
+        for (const p of participants) {
+            let pid = p.person_id;
+            if (!pid && p.name) pid = await getOrCreatePerson(req.userId, p.name);
+            if (pid) {
+                partsToInsert.push({ trip_id: trip.id, person_id: pid, is_owner: false });
+            }
+        }
     }
 
     const { error: partsError } = await supabase
@@ -74,12 +90,18 @@ router.get('/:id', async (req, res) => {
 
     const { data: participants, error: partsError } = await supabase
         .from('trip_participants')
-        .select('*')
+        .select('*, people(name)')
         .eq('trip_id', id);
 
     if (partsError) return res.status(500).json({ error: partsError.message });
 
-    res.json({ ...trip, participants });
+    // Flatten people name into participant object for frontend compatibility if needed
+    const formattedParticipants = participants?.map(p => ({
+        ...p,
+        name: p.people?.name || 'Unknown'
+    })) || [];
+
+    res.json({ ...trip, participants: formattedParticipants });
 });
 
 // PUT /api/trips/:id

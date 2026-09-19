@@ -6,6 +6,8 @@ import { motion } from 'framer-motion';
 import { staggerContainer, itemVariants, fadeUp } from '../lib/motion.js';
 import CashFlowSankey from '../components/CashFlowSankey.jsx';
 import HistoryChart from '../components/HistoryChart.jsx';
+import PullToRefresh from '../components/PullToRefresh.jsx';
+import { useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useAccounts, useItems, useDebts, useGoals } from '../hooks/useBudget.js';
 
@@ -29,6 +31,7 @@ function StatCard({ icon, iconBg, iconColor, label, value, valueClass }) {
 }
 
 export default function Dashboard() {
+  const queryClient = useQueryClient();
   const { summary } = useDashboard(currentMonth);
   const { trends } = useAnalytics(currentMonth);
   const { data: settings } = useSettings();
@@ -61,6 +64,13 @@ export default function Dashboard() {
   }
 
   return (
+    <PullToRefresh onRefresh={async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['transactions'] }),
+        queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+      ]);
+    }}>
     <div className="page">
       <motion.div className="page-header" variants={fadeUp} initial="hidden" animate="visible">
         <div>
@@ -226,5 +236,6 @@ export default function Dashboard() {
         )}
       </motion.div>
     </div>
+    </PullToRefresh>
   );
 }
