@@ -23,6 +23,28 @@ export default function ChatOverlay() {
     }
   }, [messages, isOpen]);
 
+  const handleConfirmTransaction = async (idx, txn) => {
+    setMessages(prev => prev.map((m, i) => i === idx ? { ...m, isConfirming: true } : m));
+    try {
+      if (!txn.account_id) {
+        throw new Error('No default account found. Please create one first.');
+      }
+      await apiClient.post('/transactions', {
+        ...txn
+      });
+      toast.success('Transaction logged successfully!');
+      setMessages(prev => prev.map((m, i) => i === idx ? { ...m, isConfirming: false, transactionStatus: 'confirmed' } : m));
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || 'Failed to log transaction.');
+      setMessages(prev => prev.map((m, i) => i === idx ? { ...m, isConfirming: false } : m));
+    }
+  };
+
+  const handleCancelTransaction = (idx) => {
+    setMessages(prev => prev.map((m, i) => i === idx ? { ...m, transactionStatus: 'cancelled' } : m));
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -43,7 +65,11 @@ export default function ChatOverlay() {
         history 
       });
 
-      setMessages(prev => [...prev, { role: 'assistant', content: response.text }]);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: response.text,
+        pendingTransaction: response.pendingTransaction
+      }]);
     } catch (err) {
       console.error(err);
       toast.error(err.message || 'Failed to get response from AI.');
@@ -154,6 +180,62 @@ export default function ChatOverlay() {
                       borderTopLeftRadius: msg.role === 'assistant' ? 0 : undefined,
                     }}>
                       {msg.content}
+                      {msg.pendingTransaction && (
+                        <div style={{
+                          marginTop: 'var(--space-3)',
+                          padding: 'var(--space-3)',
+                          background: 'var(--color-surface)',
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid var(--color-border)',
+                          color: 'var(--color-text)',
+                          fontSize: 'var(--text-sm)'
+                        }}>
+                          <div style={{ fontWeight: 500, marginBottom: 'var(--space-2)' }}>Draft Transaction</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+                            <span style={{ color: 'var(--color-text-2)' }}>Type:</span>
+                            <span style={{ textTransform: 'capitalize' }}>{msg.pendingTransaction.type}</span>
+                            <span style={{ color: 'var(--color-text-2)' }}>Amount:</span>
+                            <span style={{ fontWeight: 600 }}>{msg.pendingTransaction.amount}</span>
+                            <span style={{ color: 'var(--color-text-2)' }}>Date:</span>
+                            <span>{msg.pendingTransaction.occurred_at}</span>
+                            {msg.pendingTransaction.note && (
+                              <>
+                                <span style={{ color: 'var(--color-text-2)' }}>Note:</span>
+                                <span>{msg.pendingTransaction.note}</span>
+                              </>
+                            )}
+                          </div>
+                          
+                          {msg.transactionStatus === 'confirmed' ? (
+                            <div style={{ color: 'var(--color-success)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                              Logged!
+                            </div>
+                          ) : msg.transactionStatus === 'cancelled' ? (
+                            <div style={{ color: 'var(--color-error)', fontWeight: 500 }}>
+                              Cancelled.
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                              <button 
+                                onClick={() => handleConfirmTransaction(idx, msg.pendingTransaction)}
+                                className="btn btn-primary" 
+                                style={{ flex: 1, padding: 'var(--space-2)', minHeight: 36 }}
+                                disabled={msg.isConfirming}
+                              >
+                                {msg.isConfirming ? <Loader2 size={16} className="spin" /> : 'Confirm'}
+                              </button>
+                              <button 
+                                onClick={() => handleCancelTransaction(idx)}
+                                className="btn btn-outline" 
+                                style={{ flex: 1, padding: 'var(--space-2)', minHeight: 36 }}
+                                disabled={msg.isConfirming}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 ))}
