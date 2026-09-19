@@ -4,19 +4,6 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-router.get('/models', async (req, res) => {
-  try {
-    const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`);
-    const data = await response.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 router.post('/chat', authenticate, async (req, res) => {
   const { message, history } = req.body;
   const userId = req.userId;
@@ -25,9 +12,15 @@ router.post('/chat', authenticate, async (req, res) => {
     return res.status(400).json({ error: 'Message is required' });
   }
 
+  // Cap token history to the last 10 messages to prevent infinite token growth
+  const recentHistory = Array.isArray(history) ? history.slice(-10) : [];
+
   try {
-    const aiResponse = await processChatMessage(userId, message, history);
-    res.json({ text: aiResponse });
+    const aiResponse = await processChatMessage(userId, message, recentHistory);
+    res.json({ 
+      text: aiResponse.text,
+      pendingTransaction: aiResponse.pendingTransaction 
+    });
   } catch (error) {
     console.error('Chat endpoint error:', error);
     res.status(500).json({ error: error.message || 'Internal server error while processing chat.' });

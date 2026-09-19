@@ -1,9 +1,11 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabase } from '../lib/supabase.js';
 
-const logTransactionTool = {
-  name: 'log_transaction',
-  description: 'Log a new transaction (income or expense) into the system.',
+import { computeCycleBounds } from '../utils/dateUtils.js';
+
+const draftTransactionTool = {
+  name: 'draft_transaction',
+  description: 'Draft a transaction for the user to confirm. Use this when the user asks to log an expense or income.',
   parameters: {
     type: 'object',
     properties: {
@@ -44,7 +46,7 @@ const getBudgetStatusTool = {
 };
 
 const geminiTools = [{
-  functionDeclarations: [logTransactionTool, getBudgetStatusTool]
+  functionDeclarations: [draftTransactionTool, getBudgetStatusTool]
 }];
 
 export async function processChatMessage(userId, message, history = []) {
@@ -75,6 +77,8 @@ Always use the provided tools to take actions or retrieve data on behalf of the 
 
     let functionCalls = result.response.functionCalls();
     
+    let pendingTransaction = null;
+
     if (functionCalls && functionCalls.length > 0) {
       const functionResponses = [];
 
@@ -82,23 +86,62 @@ Always use the provided tools to take actions or retrieve data on behalf of the 
         const args = call.args;
         let toolResult = {};
 
-        if (call.name === 'log_transaction') {
-          const { data, error } = await supabase.from('transactions').insert({
-            user_id: userId,
+        if (call.name === 'draft_transaction') {
+          // Fetch the user's oldest account to use as the default account
+          const { data: acc } = await supabase
+            .from('accounts')
+            .select('id')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .single();
+
+          pendingTransaction = {
+            account_id: acc?.id || null,
             amount: args.amount,
             type: args.type,
-            date: args.date,
+            occurred_at: args.date || new Date().toISOString().split('T')[0],
             note: args.note
-          }).select().single();
+          };
           
-          if (error) {
-            toolResult = { error: error.message };
-          } else {
-            toolResult = { success: true, transaction: data };
-          }
+          toolResult = { success: true, message: "Draft created successfully. Ask the user to confirm it." };
         } 
         else if (call.name === 'get_budget_status') {
-          toolResult = { remaining_budget: 4500, currency: 'INR', message: "This is a placeholder." };
+          const currentMonth = args.month || new Date().toISOString().slice(0, 7);
+          const firstOfMonth = `${currentMonth}-01`;
+
+          // 1. Get cycle bounds
+          const { data: settings } = await supabase.from('user_settings').select('cycle_start_date, cycle_days').eq('user_id', userId).single();
+          const { start, end } = computeCycleBounds(currentMonth, settings);
+
+          // 2. Fetch total income for budget
+          const { data: budget } = await supabase.from('budgets').select('total_income').eq('user_id', userId).eq('month', firstOfMonth).single();
+          const totalIncome = budget?.total_income || 0;
+
+          // 3. Sum expenses for the cycle
+          const { data: txns } = await supabase.from('transactions')
+            .select('amount, type')
+            .eq('user_id', userId)
+            .gte('occurred_at', start)
+            .lte('occurred_at', end);
+
+          let totalSpent = 0;
+          if (txns) {
+            txns.forEach(t => {
+              if (['expense', 'debt_payment', 'goal_contribution'].includes(t.type)) {
+                totalSpent += Number(t.amount);
+              }
+            });
+          }
+
+          const remaining = totalIncome - totalSpent;
+          toolResult = { 
+            total_budget: totalIncome,
+            total_spent: totalSpent,
+            remaining_budget: remaining,
+            currency: 'INR',
+            message: "This is the real budget data based on their active cycle."
+          };
         }
 
         functionResponses.push({
@@ -112,7 +155,10 @@ Always use the provided tools to take actions or retrieve data on behalf of the 
       result = await chat.sendMessage(functionResponses);
     }
 
-    return result.response.text();
+    return { 
+      text: result.response.text(),
+      pendingTransaction
+    };
   } catch (error) {
     console.error('LLM Error:', error);
     throw error;
