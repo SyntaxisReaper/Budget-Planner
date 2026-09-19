@@ -5,7 +5,7 @@ import { authenticate } from '../middleware/auth.js';
 const router = express.Router();
 
 router.post('/chat', authenticate, async (req, res) => {
-  const { message, history } = req.body;
+  const { message, history, defaultAccountId } = req.body;
   const userId = req.userId;
 
   if (!message) {
@@ -16,7 +16,7 @@ router.post('/chat', authenticate, async (req, res) => {
   const recentHistory = Array.isArray(history) ? history.slice(-10) : [];
 
   try {
-    const aiResponse = await processChatMessage(userId, message, recentHistory);
+    const aiResponse = await processChatMessage(userId, message, recentHistory, defaultAccountId);
     res.json({ 
       text: aiResponse.text,
       pendingTransaction: aiResponse.pendingTransaction 

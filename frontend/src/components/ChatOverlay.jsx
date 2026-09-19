@@ -62,7 +62,8 @@ export default function ChatOverlay() {
 
       const response = await apiClient.post('/assistant/chat', { 
         message: userMessage,
-        history 
+        history,
+        defaultAccountId: localStorage.getItem('defaultAccountId') || undefined
       });
 
       setMessages(prev => [...prev, { 

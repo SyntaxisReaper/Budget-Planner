@@ -30,6 +30,7 @@ export default function Settings() {
 
   const [biometricEnabled, setBiometricEnabled] = useState(localStorage.getItem('biometricEnabled') === 'true');
   const [lowBalanceThreshold, setLowBalanceThreshold] = useState(localStorage.getItem('low_balance_threshold') || '');
+  const [defaultAccountId, setDefaultAccountId] = useState(localStorage.getItem('defaultAccountId') || '');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -122,7 +123,7 @@ export default function Settings() {
         const validTransactions = [];
         
         // Default account
-        const defaultAccount = accounts.find(a => a.is_default) || accounts[0];
+        const defaultAccount = accounts.find(a => a.id === localStorage.getItem('defaultAccountId')) || accounts[0];
 
         for (const row of rows) {
           const date = row.Date || row.date;
@@ -314,12 +315,29 @@ export default function Settings() {
               </p>
               <input 
                 type="number" inputMode="decimal"
-                inputMode="decimal"
                 value={lowBalanceThreshold}
                 onChange={(e) => setLowBalanceThreshold(e.target.value)}
                 placeholder="e.g. 1000"
                 className="input"
               />
+            </div>
+
+            <div className="form-group mt-4">
+              <label>Default Account</label>
+              <p style={{ fontSize: '12px', color: 'var(--color-text-3)', margin: '0 0 8px' }}>
+                Used for AI Assistant transactions and CSV imports.
+              </p>
+              <select 
+                className="select" 
+                value={defaultAccountId} 
+                onChange={(e) => {
+                  setDefaultAccountId(e.target.value);
+                  localStorage.setItem('defaultAccountId', e.target.value);
+                }}
+              >
+                <option value="">Auto (Oldest Account)</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
             </div>
           </div>
 
