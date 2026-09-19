@@ -72,7 +72,7 @@ Always use the provided tools to take actions or retrieve data on behalf of the 
       history: formattedHistory.length > 0 ? formattedHistory : undefined
     });
 
-    let response = await chat.sendMessage({ message });
+    let response = await chat.sendMessage(message);
 
     // Handle tool calls
     if (response.functionCalls && response.functionCalls.length > 0) {
