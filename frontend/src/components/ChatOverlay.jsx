@@ -62,13 +62,13 @@ export default function ChatOverlay() {
         animate={{ scale: isOpen ? 0 : 1 }}
         style={{
           position: 'fixed',
-          bottom: '80px',
+          bottom: '100px',
           right: 'var(--space-4)',
           width: 56,
           height: 56,
           borderRadius: '50%',
           padding: 0,
-          zIndex: 40,
+          zIndex: 999,
           boxShadow: 'var(--shadow-lg)'
         }}
       >
@@ -90,7 +90,7 @@ export default function ChatOverlay() {
               right: 0,
               bottom: 0,
               background: 'var(--color-bg)',
-              zIndex: 50,
+              zIndex: 9999,
               display: 'flex',
               flexDirection: 'column'
             }}
