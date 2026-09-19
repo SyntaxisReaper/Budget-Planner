@@ -13,9 +13,9 @@ function TaskCard({ task, toggleStatus, remove, getPriorityColor }) {
   return (
     <motion.div variants={itemVariants} className="card p-3 flex flex-col gap-3 cursor-pointer" onClick={() => setExpanded(!expanded)}>
       <div className="flex items-start gap-3">
-        <button className="mt-1" style={{ color: 'var(--color-text-3)', background: 'transparent' }} onClick={(e) => { e.stopPropagation(); toggleStatus(task); }}>
+        <div className="mt-1" style={{ color: 'var(--color-text-3)', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); toggleStatus(task); }}>
           <Circle size={20} />
-        </button>
+        </div>
         <div className="flex-1">
           <h4 className="font-bold">{task.title}</h4>
           {task.description && <p className="text-sm text-muted mt-1">{task.description}</p>}
@@ -28,9 +28,9 @@ function TaskCard({ task, toggleStatus, remove, getPriorityColor }) {
             )}
           </div>
         </div>
-        <button className="btn btn-icon btn-ghost" style={{ color: 'var(--color-danger)' }} onClick={(e) => { e.stopPropagation(); if(confirm('Delete task?')) remove.mutate(task.id); }}>
+        <div style={{ color: 'var(--color-danger)', cursor: 'pointer', padding: '4px' }} onClick={(e) => { e.stopPropagation(); if(confirm('Delete task?')) remove.mutate(task.id); }}>
           <Trash2 size={16} />
-        </button>
+        </div>
       </div>
       {expanded && (
         <div onClick={e => e.stopPropagation()}>
