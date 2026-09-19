@@ -33,7 +33,6 @@ const navGroups = [
   {
     title: 'Assistant',
     links: [
-      { to: '/assistant',    icon: MessageSquare,   label: 'Chat'         },
       { to: '/calendar',     icon: Calendar,        label: 'Calendar'     },
       { to: '/tasks',        icon: CheckSquare,     label: 'Tasks'        },
       { to: '/notes',        icon: FileText,        label: 'Notes'        },
