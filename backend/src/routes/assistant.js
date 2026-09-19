@@ -17,7 +17,7 @@ router.post('/chat', authenticate, async (req, res) => {
     res.json({ text: aiResponse });
   } catch (error) {
     console.error('Chat endpoint error:', error);
-    res.status(500).json({ error: 'Internal server error while processing chat.' });
+    res.status(500).json({ error: error.message || 'Internal server error while processing chat.' });
   }
 });
 

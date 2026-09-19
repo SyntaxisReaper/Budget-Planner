@@ -115,6 +115,6 @@ Always use the provided tools to take actions or retrieve data on behalf of the 
     return result.response.text();
   } catch (error) {
     console.error('LLM Error:', error);
-    throw new Error('Failed to process message with AI assistant.');
+    throw error;
   }
 }
