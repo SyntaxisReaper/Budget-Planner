@@ -49,10 +49,9 @@ const geminiTools = [{
   functionDeclarations: [draftTransactionTool, getBudgetStatusTool]
 }];
 
-export async function processChatMessage(userId, message, history = []) {
+export async function processChatMessage(userId, message, history = [], defaultAccountId = null) {
   try {
-    const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'MISSING_KEY');
-    
+    const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const systemInstruction = `You are a helpful, concise financial personal assistant.
 Your goal is to help the user manage their finances by logging transactions, querying their budget, and answering questions.
 Always use the provided tools to take actions or retrieve data on behalf of the user. Keep your responses short.`;
@@ -87,17 +86,22 @@ Always use the provided tools to take actions or retrieve data on behalf of the 
         let toolResult = {};
 
         if (call.name === 'draft_transaction') {
-          // Fetch the user's oldest account to use as the default account
-          const { data: acc } = await supabase
-            .from('accounts')
-            .select('id')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: true })
-            .limit(1)
-            .single();
+          let selectedAccountId = defaultAccountId;
+          
+          if (!selectedAccountId) {
+            // Fetch the user's oldest account to use as the fallback default account
+            const { data: acc } = await supabase
+              .from('accounts')
+              .select('id')
+              .eq('user_id', userId)
+              .order('created_at', { ascending: true })
+              .limit(1)
+              .single();
+            selectedAccountId = acc?.id || null;
+          }
 
           pendingTransaction = {
-            account_id: acc?.id || null,
+            account_id: selectedAccountId,
             amount: args.amount,
             type: args.type,
             occurred_at: args.date || new Date().toISOString().split('T')[0],
