@@ -10,7 +10,8 @@ import { Lock } from 'lucide-react';
 
 import { useSupabaseAuth } from './hooks/useSupabaseAuth.js';
 import { useVersionCheck } from './hooks/useVersionCheck.js';
-import { useSubscriptions, useAccounts, useDebts, useTrips } from './hooks/useBudget.js';
+import { useSubscriptions, useAccounts, useDebts } from './hooks/useBudget.js';
+import { useTrips } from './hooks/useTrips.js';
 import { requestNotificationPermissions, scheduleUpcomingReminders, checkLowBalance, notifyDebtPaid } from './lib/notifications.js';
 import toast, { triggerCelebration } from './lib/haptics.js';
 import apiClient from './lib/apiClient.js';
