@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Target, Search, MoreVertical, Plus } from 'lucide-react';
 import { useGoals } from '../hooks/useBudget.js';
 import GoalProgressCard from '../components/GoalProgressCard.jsx';
-import toast, { impactLight } from '../lib/haptics.js';
+import EmptyState from '../components/EmptyState.jsx';
+import toast, { impactLight, impactMedium } from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants , tapFeedback } from '../lib/motion.js';
@@ -125,11 +126,13 @@ export default function Goals() {
       {query.isLoading ? (
         <div className="empty-state"><div className="spinner" /></div>
       ) : goals.length === 0 ? (
-        <motion.div className="card empty-state" variants={itemVariants} initial="hidden" animate="visible">
-          <div className="empty-state-icon"><span style={{ fontSize: 28 }}>🎯</span></div>
-          <p>No goals yet. Set your first financial target!</p>
-          <button className="btn btn-primary btn-sm" onClick={() => setModal('add')}>Add a Goal</button>
-        </motion.div>
+        <EmptyState 
+          icon={Target} 
+          title="No Goals Yet" 
+          message="Set your first financial target!"
+          actionLabel="Add a Goal"
+          onAction={() => setModal('add')}
+        />
       ) : (
         <div className="grid-2" ref={parent}>
           {goals.map((goal) => (

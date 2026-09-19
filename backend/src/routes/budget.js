@@ -90,7 +90,7 @@ router.put('/:month/allocations/:target_type/:target_id', async (req, res) => {
   const { allocated_amount } = req.body;
   const firstOfMonth = `${month}-01`;
 
-  if (!['item', 'debt', 'goal'].includes(target_type)) {
+  if (!['item', 'debt', 'goal', 'subscription'].includes(target_type)) {
     return res.status(400).json({ error: 'Invalid target_type' });
   }
 

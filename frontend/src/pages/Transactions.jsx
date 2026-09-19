@@ -1,12 +1,17 @@
 import { useState, useMemo } from 'react';
 import { TableVirtuoso } from 'react-virtuoso';
-import { Plus, Filter, ArrowRightLeft } from 'lucide-react';
+import { Plus, Filter, ArrowRightLeft, Banknote } from 'lucide-react';
 import { useTransactions, useItems, useAccounts, useDebts, useGoals, useSettings, useCategorizationTrainingData } from '../hooks/useBudget.js';
 import { trainCategorizer, predictCategory } from '../lib/categorization.js';
 import { computeCycleBounds } from '../lib/dateUtils.js';
 import toast, { impactLight } from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import PullToRefresh from '../components/PullToRefresh.jsx';
+import CurrencyInput from '../components/CurrencyInput.jsx';
+import EmptyState from '../components/EmptyState.jsx';
+import { useQueryClient } from '@tanstack/react-query';
+import { useUndoableAction } from '../hooks/useUndo.js';
 import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants , tapFeedback } from '../lib/motion.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
@@ -133,10 +138,9 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
               </select>
             </div>
             <div className="form-group">
-              <label className="label">Amount (₹)</label>
-              <input type="number" inputMode="decimal" className="input" step="0.01" min="0" placeholder="0.00" required
-                value={form.amount} onChange={(e) => set('amount', e.target.value)} />
-            </div>
+            <label className="label">Amount (₹)</label>
+            <CurrencyInput className="input text-xl font-bold" placeholder="0.00" value={form.amount} onChange={(v) => set('amount', v)} required />
+          </div>
           </div>
 
           {form.type === 'expense' && (
@@ -210,6 +214,8 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
 }
 
 export default function Transactions() {
+  const queryClient = useQueryClient();
+  const { executeUndoable } = useUndoableAction();
   const [month, setMonth] = useState(new Date().toISOString().substring(0, 7));
   const [showModal, setShowModal] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
@@ -265,13 +271,12 @@ export default function Transactions() {
   const totalExpenses = transactions.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
 
   async function handleDelete(id) {
-    if (!confirm('Delete this transaction? It will automatically reverse its effect on your account balance.')) return;
-    try {
-      await remove.mutateAsync(id);
-      toast.success('Transaction deleted');
-    } catch (err) {
-      toast.error(err.message);
-    }
+    executeUndoable(id, ['transactions', cycleStart, cycleEnd], async (tid) => {
+      await remove.mutateAsync(tid);
+      // Let backend catch up
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    }, 'Transaction deleted');
   }
 
   function renderTarget(t) {
@@ -285,7 +290,10 @@ export default function Transactions() {
   }
 
   return (
-    <div className="page">
+    <PullToRefresh onRefresh={async () => {
+      await queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    }}>
+    <div className="page" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
       <motion.div className="page-header flex items-center justify-between" variants={fadeUp} initial="hidden" animate="visible">
         <div>
           <h1 className="page-title">Transactions</h1>
@@ -353,9 +361,13 @@ export default function Transactions() {
         {query.isLoading ? (
           <div className="empty-state"><div className="spinner" /></div>
         ) : filtered.length === 0 ? (
-          <div className="empty-state">
-            <p>No transactions found for this period.</p>
-          </div>
+          <EmptyState 
+            icon={Banknote}
+            title="No Transactions" 
+            message="No transactions found for this period." 
+            actionLabel="Log a Transaction"
+            onAction={() => setShowModal(true)}
+          />
         ) : (
           <div className="table-wrap" style={{ height: 'calc(100vh - 380px)', minHeight: 400 }}>
             <TableVirtuoso
@@ -426,5 +438,6 @@ export default function Transactions() {
         )}
       </AnimatePresence>
     </div>
+    </PullToRefresh>
   );
 }

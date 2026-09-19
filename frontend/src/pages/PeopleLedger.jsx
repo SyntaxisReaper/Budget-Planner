@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Plus, Share2, Pencil, Trash2 } from 'lucide-react';
-import { usePeople } from '../hooks/useBudget.js';
+import { usePeopleLedger, useContacts } from '../hooks/useBudget.js';
 import { useSettings } from '../hooks/useBudget.js'; // Wait, I don't have useSettings exported from useBudget.js. Let me just use useQuery directly.
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../lib/apiClient.js';
@@ -34,15 +34,27 @@ function MotionModal({ children, onClose }) {
 }
 
 function AddPersonModal({ onClose, onCreate }) {
-  const [form, setForm] = useState({ person_name: '', amount: '', direction: 'lent', note: '' });
+  const [form, setForm] = useState({ person_id: '', amount: '', direction: 'lent', note: '' });
   const [loading, setLoading] = useState(false);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const { query: contactsQuery, create: createContact } = useContacts();
+  const contacts = contactsQuery.data || [];
 
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
     try {
-      await onCreate({ ...form, amount: parseFloat(form.amount) });
+      let finalPersonId = form.person_id;
+      if (finalPersonId === 'NEW') {
+        const name = prompt("Enter new person's name:");
+        if (!name) { setLoading(false); return; }
+        const newContact = await createContact.mutateAsync({ name });
+        finalPersonId = newContact.id;
+      }
+      
+      if (!finalPersonId) throw new Error("Please select a person");
+
+      await onCreate({ ...form, person_id: finalPersonId, amount: parseFloat(form.amount) });
       onClose();
     } catch (err) {
       toast.error(err.message);
@@ -57,8 +69,12 @@ function AddPersonModal({ onClose, onCreate }) {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="form-group">
           <label className="label">Who?</label>
-          <input type="text" className="input" placeholder="e.g. Pratik" required autoFocus
-            value={form.person_name} onChange={e => set('person_name', e.target.value)} />
+          <select className="select" required autoFocus
+            value={form.person_id} onChange={e => set('person_id', e.target.value)}>
+            <option value="" disabled>Select someone...</option>
+            {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option value="NEW">+ Create New Contact</option>
+          </select>
         </div>
         <div className="form-row">
           <div className="form-group">
@@ -90,8 +106,8 @@ function AddPersonModal({ onClose, onCreate }) {
   );
 }
 
-export default function People() {
-  const { query, create, update, remove } = usePeople();
+export default function PeopleLedger() {
+  const { query, create, update, remove } = usePeopleLedger();
   const [showAdd, setShowAdd] = useState(false);
   
   const people = query.data || [];
@@ -129,7 +145,7 @@ export default function People() {
   };
 
   const handleSettle = async (person) => {
-    if (!confirm(`Mark this IOU with ${person.person_name} as settled?`)) return;
+    if (!confirm(`Mark this IOU with ${person.people?.name || 'Unknown'} as settled?`)) return;
     try {
       await update.mutateAsync({ id: person.id, status: 'settled' });
     } catch (err) {
@@ -186,7 +202,7 @@ export default function People() {
               <motion.div key={person.id} variants={itemVariants} className="card p-4 flex flex-col gap-3">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-bold text-lg">{person.person_name}</h3>
+                    <h3 className="font-bold text-lg">{person.people?.name || 'Unknown'}</h3>
                     <p className="text-xs text-muted mt-1">
                       {new Date(person.created_at).toLocaleDateString()} {person.note && `· ${person.note}`}
                     </p>

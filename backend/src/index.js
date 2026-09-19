@@ -14,7 +14,11 @@ import dashboardRoutes from './routes/dashboard.js';
 import settingsRoutes from './routes/settings.js';
 import accountsRoutes from './routes/accounts.js';
 import subscriptionsRoutes from './routes/subscriptions.js';
-import peopleRoutes from './routes/people.js';
+import peopleLedgerRoutes from './routes/people-ledger.js';
+import contactsRoutes from './routes/contacts.js';
+import tasksRoutes from './routes/tasks.js';
+import notesRoutes from './routes/notes.js';
+import linksRoutes from './routes/links.js';
 import tripsRoutes from './routes/trips.js';
 
 const app = express();
@@ -49,7 +53,11 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/accounts', accountsRoutes);
 app.use('/api/subscriptions', subscriptionsRoutes);
-app.use('/api/people', peopleRoutes);
+app.use('/api/people-ledger', peopleLedgerRoutes);
+app.use('/api/people', contactsRoutes);
+app.use('/api/tasks', tasksRoutes);
+app.use('/api/notes', notesRoutes);
+app.use('/api/links', linksRoutes);
 app.use('/api/trips', tripsRoutes);
 
 // Global error handler

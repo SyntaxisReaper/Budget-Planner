@@ -344,6 +344,30 @@ export default function Settings() {
           </motion.div>
         )}
 
+        <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mt-4">
+          <div className="section-title mb-4">Preferences</div>
+          <div className="card flex items-center justify-between" style={{ padding: 'var(--space-4)' }}>
+            <div className="flex items-center gap-4">
+              <div className="stat-icon" style={{ background: 'rgba(59,130,246,0.1)', marginBottom: 0 }}>
+                <Bell size={18} color="#3b82f6" />
+              </div>
+              <div>
+                <div className="font-semibold">In-App Sounds</div>
+                <div className="text-xs text-muted">Play tones on actions (cha-ching, etc.)</div>
+              </div>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input type="checkbox" 
+                defaultChecked={localStorage.getItem('ui_sounds_enabled') !== 'false'}
+                onChange={(e) => {
+                  localStorage.setItem('ui_sounds_enabled', e.target.checked);
+                  toast.success(e.target.checked ? 'Sounds enabled' : 'Sounds muted');
+                }} 
+                style={{ transform: 'scale(1.2)' }} />
+            </label>
+          </div>
+        </motion.div>
+
         {/* Data Management Section */}
         <motion.div variants={fadeUp} initial="hidden" animate="visible" className="mt-4">
           <div className="section-title mb-4">Data Management</div>
