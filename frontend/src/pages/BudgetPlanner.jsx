@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useBudget, useItems, useDebts, useGoals, useSubscriptions, useSettings } from '../hooks/useBudget.js';
 import { computeCycleBounds } from '../lib/dateUtils.js';
 import { motion } from 'framer-motion';
@@ -13,6 +13,10 @@ function AllocationRow({ type, entity, allocationsMap, onSave, onRemove }) {
   const allocatedAmount = allocation?.allocated_amount ? Number(allocation.allocated_amount) : 0;
   const spentAmount = allocation?.spent_amount ? Number(allocation.spent_amount) : 0;
   const [val, setVal] = useState(allocatedAmount > 0 ? allocatedAmount.toString() : '');
+
+  useEffect(() => {
+    setVal(allocatedAmount > 0 ? allocatedAmount.toString() : '');
+  }, [allocatedAmount]);
 
   const targetAmount = type === 'item' ? entity.amount_needed : type === 'debt' ? entity.min_payment || entity.remaining_balance : entity.target_amount;
   const pct = allocatedAmount > 0 ? Math.min(100, (spentAmount / allocatedAmount) * 100) : 0;
