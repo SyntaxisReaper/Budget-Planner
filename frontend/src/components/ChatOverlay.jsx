@@ -43,7 +43,7 @@ export default function ChatOverlay() {
         history 
       });
 
-      setMessages(prev => [...prev, { role: 'assistant', content: response.data.text }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: response.text }]);
     } catch (err) {
       console.error(err);
       toast.error(err.message || 'Failed to get response from AI.');
