@@ -3,7 +3,7 @@ import { impactLight } from '../lib/haptics.js';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, ReceiptText, ShoppingCart,
-  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Landmark, Repeat, User, Bell, Plane, Calendar, CheckSquare, FileText, Users, Grid, X
+  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Landmark, Repeat, User, Bell, Plane, Calendar, CheckSquare, FileText, Users, Grid, X, MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { slideInLeft, tapFeedback, backdropVariants, modalVariants } from '../lib/motion.js';
@@ -33,6 +33,7 @@ const navGroups = [
   {
     title: 'Assistant',
     links: [
+      { to: '/assistant',    icon: MessageSquare,   label: 'Chat'         },
       { to: '/calendar',     icon: Calendar,        label: 'Calendar'     },
       { to: '/tasks',        icon: CheckSquare,     label: 'Tasks'        },
       { to: '/notes',        icon: FileText,        label: 'Notes'        },
