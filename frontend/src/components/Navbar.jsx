@@ -144,7 +144,7 @@ export default function Navbar({ user, onSignOut }) {
             key={to}
             to={to}
             end={to === '/'}
-            className={({ isActive }) => `bottom-tab-link${isActive ? ' active' : ''}`}
+            className={({ isActive }) => `bottom-tab-link${isActive && !mobileMenuOpen ? ' active' : ''}`}
             onClick={() => setMobileMenuOpen(false)}
           >
             <Icon size={22} />
