@@ -385,6 +385,11 @@ img { display: block; max-width: 100%; }
     font-weight: 500;
     gap: 4px;
     transition: color 0.3s ease;
+    background: transparent;
+    border: none;
+    padding: 0;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
   }
   
   .bottom-tab-link.active {

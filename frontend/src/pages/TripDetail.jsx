@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Plane, Users, Plus, ArrowLeft, ArrowRightLeft, CheckCircle2, Trash2, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTrip, useTripTransactions, useTripSettlement } from '../hooks/useTrips.js';
+import { useContacts } from '../hooks/useBudget.js';
 import LogTripTransactionModal from '../components/Trips/LogTripTransactionModal.jsx';
 import { formatCurrency } from '../lib/utils.js';
 import toast from '../lib/haptics.js';
@@ -13,9 +14,12 @@ export default function TripDetail() {
   const { query: tripQuery, completeMutation } = useTrip(id);
   const { query: txQuery, deleteMutation } = useTripTransactions(id);
   const { query: settlementQuery } = useTripSettlement(id);
+  const { query: contactsQuery, create: createContact } = useContacts();
 
   const [showLogModal, setShowLogModal] = useState(false);
   const [activeTab, setActiveTab] = useState('transactions'); // transactions | settlement
+  const [selectedContact, setSelectedContact] = useState('');
+  const [showAddParticipant, setShowAddParticipant] = useState(false);
 
   if (tripQuery.isLoading) {
     return <div className="page"><p>Loading trip details...</p></div>;
@@ -142,6 +146,66 @@ export default function TripDetail() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {trip.type === 'group' && trip.status !== 'completed' && !showAddParticipant && (
+            <button className="btn btn-outline" style={{ width: '100%', marginTop: 'var(--space-4)' }} onClick={() => setShowAddParticipant(true)}>
+              + Add Participant
+            </button>
+          )}
+
+          {/* Add Participant Area */}
+          {showAddParticipant && (
+            <div style={{ marginTop: 'var(--space-4)', display: 'flex', gap: 'var(--space-2)' }}>
+              <select 
+                className="select" 
+                value={selectedContact} 
+                onChange={e => setSelectedContact(e.target.value)} 
+                style={{ flex: 1 }}
+              >
+                <option value="" disabled>Select a friend...</option>
+                {contactsQuery.data?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                <option value="NEW">+ Create New Contact</option>
+              </select>
+              <button className="btn btn-primary" onClick={async () => {
+                if (!selectedContact) return;
+                
+                let pid = selectedContact;
+                if (pid === 'NEW') {
+                  const inputName = prompt("Enter new friend's name:");
+                  if (!inputName) {
+                    setSelectedContact('');
+                    return;
+                  }
+                  try {
+                    const newContact = await createContact.mutateAsync({ name: inputName });
+                    pid = newContact.id;
+                  } catch (err) {
+                    toast.error('Failed to create contact');
+                    return;
+                  }
+                }
+                
+                try {
+                  const { supabase } = await import('../lib/supabaseClient.js');
+                  const { data: { session } } = await supabase.auth.getSession();
+                  const res = await fetch(`${import.meta.env.VITE_API_URL}/api/trips/${id}/participants`, {
+                    method: 'POST',
+                    headers: { 
+                      'Content-Type': 'application/json', 
+                      'Authorization': `Bearer ${session.access_token}` 
+                    },
+                    body: JSON.stringify({ person_id: pid })
+                  });
+                  if (!res.ok) throw new Error('Failed to add participant');
+                  tripQuery.refetch();
+                  setShowAddParticipant(false);
+                  setSelectedContact('');
+                } catch (e) {
+                  toast.error(e.message);
+                }
+              }}>Add</button>
             </div>
           )}
         </div>

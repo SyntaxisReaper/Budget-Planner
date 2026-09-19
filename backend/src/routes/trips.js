@@ -9,12 +9,19 @@ router.use(authenticate);
 router.get('/', async (req, res) => {
     const { data, error } = await supabase
         .from('trips')
-        .select('*')
+        .select('*, trip_participants(person_id)')
         .eq('user_id', req.userId)
         .order('created_at', { ascending: false });
 
     if (error) return res.status(500).json({ error: error.message });
-    res.json(data);
+    
+    // Format for frontend
+    const formattedData = data.map(t => ({
+        ...t,
+        participants: t.trip_participants || []
+    }));
+    
+    res.json(formattedData);
 });
 
 // POST /api/trips
@@ -138,7 +145,7 @@ router.delete('/:id', async (req, res) => {
 // POST /api/trips/:id/participants
 router.post('/:id/participants', async (req, res) => {
     const { id } = req.params;
-    const { name } = req.body;
+    const { person_id } = req.body;
 
     // Verify trip ownership
     const { data: trip, error: tripError } = await supabase
@@ -152,12 +159,17 @@ router.post('/:id/participants', async (req, res) => {
 
     const { data, error } = await supabase
         .from('trip_participants')
-        .insert({ trip_id: id, name, is_owner: false })
-        .select()
+        .insert({ trip_id: id, person_id, is_owner: false })
+        .select('*, people(name)')
         .single();
 
     if (error) return res.status(500).json({ error: error.message });
-    res.status(201).json(data);
+    
+    // Format for frontend
+    res.status(201).json({
+        ...data,
+        name: data.people?.name || 'Unknown'
+    });
 });
 
 // DELETE /api/trips/:id/participants/:participantId
@@ -318,12 +330,17 @@ router.delete('/:id/transactions/:txId', async (req, res) => {
 
 async function getSettlementData(id) {
     // 1. Fetch participants
-    const { data: participants, error: pError } = await supabase
+    const { data: participantsRaw, error: pError } = await supabase
         .from('trip_participants')
-        .select('id, name')
+        .select('id, people(name)')
         .eq('trip_id', id);
 
     if (pError) throw new Error(pError.message);
+    
+    const participants = participantsRaw.map(p => ({
+        id: p.id,
+        name: p.people?.name || 'Unknown'
+    }));
 
     // 2. Fetch all transactions
     const { data: transactions, error: tError } = await supabase

@@ -5,6 +5,41 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { pageVariants, staggerContainer, itemVariants, backdropVariants, modalVariants, fadeUp, tapFeedback } from '../lib/motion.js';
 import { impactLight } from '../lib/haptics.js';
 import { format } from 'date-fns';
+import Links from '../components/Links.jsx';
+
+function TaskCard({ task, toggleStatus, remove, getPriorityColor }) {
+  const [expanded, setExpanded] = useState(false);
+  
+  return (
+    <motion.div variants={itemVariants} className="card p-3 flex flex-col gap-3 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+      <div className="flex items-start gap-3">
+        <button className="mt-1" style={{ color: 'var(--color-text-3)', background: 'transparent' }} onClick={(e) => { e.stopPropagation(); toggleStatus(task); }}>
+          <Circle size={20} />
+        </button>
+        <div className="flex-1">
+          <h4 className="font-bold">{task.title}</h4>
+          {task.description && <p className="text-sm text-muted mt-1">{task.description}</p>}
+          <div className="flex items-center gap-4 mt-2 text-xs">
+            <span style={{ color: getPriorityColor(task.priority), fontWeight: 600, textTransform: 'uppercase' }}>{task.priority}</span>
+            {task.due_date && (
+              <span className="flex items-center gap-1 text-muted">
+                <Calendar size={12}/> {format(new Date(task.due_date), 'MMM d, yyyy')}
+              </span>
+            )}
+          </div>
+        </div>
+        <button className="btn btn-icon btn-ghost" style={{ color: 'var(--color-danger)' }} onClick={(e) => { e.stopPropagation(); if(confirm('Delete task?')) remove.mutate(task.id); }}>
+          <Trash2 size={16} />
+        </button>
+      </div>
+      {expanded && (
+        <div onClick={e => e.stopPropagation()}>
+          <Links entityType="task" entityId={task.id} />
+        </div>
+      )}
+    </motion.div>
+  );
+}
 
 function TaskModal({ onClose, onCreate }) {
   const [form, setForm] = useState({ title: '', description: '', priority: 'normal', due_date: '' });
@@ -105,26 +140,13 @@ export default function Tasks() {
             </motion.div>
           ) : (
             pendingTasks.map(task => (
-              <motion.div key={task.id} variants={itemVariants} className="card p-3 flex items-start gap-3">
-                <button className="mt-1" style={{ color: 'var(--color-text-3)', background: 'transparent' }} onClick={() => toggleStatus(task)}>
-                  <Circle size={20} />
-                </button>
-                <div className="flex-1">
-                  <h4 className="font-bold">{task.title}</h4>
-                  {task.description && <p className="text-sm text-muted mt-1">{task.description}</p>}
-                  <div className="flex items-center gap-4 mt-2 text-xs">
-                    <span style={{ color: getPriorityColor(task.priority), fontWeight: 600, textTransform: 'uppercase' }}>{task.priority}</span>
-                    {task.due_date && (
-                      <span className="flex items-center gap-1 text-muted">
-                        <Calendar size={12}/> {format(new Date(task.due_date), 'MMM d, yyyy')}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <button className="btn btn-icon btn-ghost" style={{ color: 'var(--color-danger)' }} onClick={() => { if(confirm('Delete task?')) remove.mutate(task.id); }}>
-                  <Trash2 size={16} />
-                </button>
-              </motion.div>
+              <TaskCard 
+                key={task.id} 
+                task={task} 
+                toggleStatus={toggleStatus} 
+                remove={remove} 
+                getPriorityColor={getPriorityColor} 
+              />
             ))
           )}
         </div>

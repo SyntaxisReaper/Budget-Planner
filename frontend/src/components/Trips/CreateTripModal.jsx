@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { useTrips } from '../../hooks/useTrips.js';
+import { useContacts } from '../../hooks/useBudget.js';
 import toast from '../../lib/haptics.js';
 import { motion } from 'framer-motion';
 import { backdropVariants, modalVariants } from '../../lib/motion.js';
@@ -20,18 +21,50 @@ export default function CreateTripModal({ onClose }) {
   });
   
   const [participants, setParticipants] = useState([]);
-  const [newParticipant, setNewParticipant] = useState('');
+  const [selectedContact, setSelectedContact] = useState('');
+  
+  const { query: contactsQuery, create: createContact } = useContacts();
+  const contacts = contactsQuery.data || [];
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
-  const handleAddParticipant = (e) => {
-    e.preventDefault();
-    if (!newParticipant.trim()) return;
-    setParticipants(prev => [...prev, { name: newParticipant.trim() }]);
-    setNewParticipant('');
+  const handleAddParticipant = async (e) => {
+    e?.preventDefault();
+    if (!selectedContact) return;
+    
+    let pid = selectedContact;
+    let name = '';
+    
+    if (pid === 'NEW') {
+      const inputName = prompt("Enter new friend's name:");
+      if (!inputName) {
+        setSelectedContact('');
+        return;
+      }
+      try {
+        const newContact = await createContact.mutateAsync({ name: inputName });
+        pid = newContact.id;
+        name = newContact.name;
+      } catch (err) {
+        toast.error('Failed to create contact');
+        return;
+      }
+    } else {
+      const contact = contacts.find(c => c.id === pid);
+      if (contact) name = contact.name;
+    }
+    
+    if (participants.some(p => p.person_id === pid)) {
+      toast.error('Participant already added');
+      setSelectedContact('');
+      return;
+    }
+    
+    setParticipants(prev => [...prev, { person_id: pid, name }]);
+    setSelectedContact('');
   };
 
   const removeParticipant = (index) => {
@@ -137,14 +170,16 @@ export default function CreateTripModal({ onClose }) {
               )}
 
               <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                <input 
-                  type="text" 
-                  className="input" 
-                  value={newParticipant} 
-                  onChange={e => setNewParticipant(e.target.value)} 
-                  placeholder="Friend's Name" 
-                  onKeyDown={e => { if(e.key === 'Enter') { e.preventDefault(); handleAddParticipant(e); } }}
-                />
+                <select 
+                  className="select" 
+                  value={selectedContact} 
+                  onChange={e => setSelectedContact(e.target.value)} 
+                  style={{ flex: 1 }}
+                >
+                  <option value="" disabled>Select a friend...</option>
+                  {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <option value="NEW">+ Create New Contact</option>
+                </select>
                 <button type="button" className="btn btn-outline" style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)' }} onClick={handleAddParticipant}>
                   <Plus size={18} />
                 </button>

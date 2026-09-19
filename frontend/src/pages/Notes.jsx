@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { pageVariants, staggerContainer, itemVariants, backdropVariants, modalVariants, fadeUp, tapFeedback } from '../lib/motion.js';
 import { impactLight } from '../lib/haptics.js';
 import { format } from 'date-fns';
+import Links from '../components/Links.jsx';
 
 function NoteModal({ note, onClose, onSave }) {
   const [form, setForm] = useState({ title: note?.title || '', content: note?.content || '' });
@@ -36,7 +37,10 @@ function NoteModal({ note, onClose, onSave }) {
             <textarea className="input" style={{ flex: 1, resize: 'none', fontFamily: 'monospace' }} placeholder="Write something..."
               value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} />
           </div>
-          <div className="modal-actions mt-auto">
+          
+          {note && <Links entityType="note" entityId={note.id} />}
+
+          <div className="modal-actions mt-auto pt-4">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn btn-primary" disabled={loading}>
               {loading ? <span className="spinner"/> : 'Save'}
