@@ -19,6 +19,7 @@ import Navbar from './components/Navbar.jsx';
 import AuthGuard from './components/AuthGuard.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import OfflineBanner from './components/OfflineBanner.jsx';
+import ChatOverlay from './components/ChatOverlay.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
 import { pageVariants } from './lib/motion.js';
@@ -44,7 +45,6 @@ const Contacts = lazy(() => import('./pages/Contacts.jsx'));
 const Trips = lazy(() => import('./pages/Trips.jsx'));
 const TripDetail = lazy(() => import('./pages/TripDetail.jsx'));
 const PayLink = lazy(() => import('./pages/PayLink.jsx'));
-const Assistant = lazy(() => import('./pages/Assistant.jsx'));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -113,7 +113,6 @@ function AnimatedRoutes() {
         <Route path="/settings"     element={<PageWrapper><Settings /></PageWrapper>} />
         <Route path="/subscriptions" element={<PageWrapper><Subscriptions /></PageWrapper>} />
         <Route path="/contacts"     element={<PageWrapper><Contacts /></PageWrapper>} />
-        <Route path="/assistant"    element={<PageWrapper><Assistant /></PageWrapper>} />
         <Route path="/people-ledger" element={<PageWrapper><PeopleLedger /></PageWrapper>} />
         <Route path="/tasks"        element={<PageWrapper><Tasks /></PageWrapper>} />
         <Route path="/notes"        element={<PageWrapper><Notes /></PageWrapper>} />
@@ -350,6 +349,7 @@ function AppShell() {
                     <AnimatedRoutes />
                   </ErrorBoundary>
                 </main>
+                <ChatOverlay />
               </div>
             </AuthGuard>
           }
