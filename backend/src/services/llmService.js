@@ -1,8 +1,5 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabase } from '../lib/supabase.js';
-
-// Requires GEMINI_API_KEY in .env
-const ai = new GoogleGenAI();
 
 const logTransactionTool = {
   name: 'log_transaction',
@@ -52,34 +49,36 @@ const geminiTools = [{
 
 export async function processChatMessage(userId, message, history = []) {
   try {
+    const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'MISSING_KEY');
+    
     const systemInstruction = `You are a helpful, concise financial personal assistant.
 Your goal is to help the user manage their finances by logging transactions, querying their budget, and answering questions.
 Always use the provided tools to take actions or retrieve data on behalf of the user. Keep your responses short.`;
 
-    let formattedHistory = history.map(msg => ({
+    const formattedHistory = history.map(msg => ({
       role: msg.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: msg.content }]
     }));
 
-    // Start a chat session
-    const chat = ai.chats.create({
-      model: 'gemini-2.5-flash',
-      config: {
-        systemInstruction,
-        tools: geminiTools,
-        temperature: 0.3
-      },
-      history: formattedHistory.length > 0 ? formattedHistory : undefined
+    const model = ai.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      systemInstruction,
+      tools: geminiTools,
+      generationConfig: { temperature: 0.3 }
     });
 
-    let response = await chat.sendMessage(message);
+    const chat = model.startChat({
+      history: formattedHistory
+    });
 
-    // Handle tool calls
-    if (response.functionCalls && response.functionCalls.length > 0) {
-      const calls = response.functionCalls;
+    let result = await chat.sendMessage(message);
+
+    let functionCalls = result.response.functionCalls();
+    
+    if (functionCalls && functionCalls.length > 0) {
       const functionResponses = [];
 
-      for (const call of calls) {
+      for (const call of functionCalls) {
         const args = call.args;
         let toolResult = {};
 
@@ -103,16 +102,17 @@ Always use the provided tools to take actions or retrieve data on behalf of the 
         }
 
         functionResponses.push({
-          name: call.name,
-          response: toolResult
+          functionResponse: {
+            name: call.name,
+            response: toolResult
+          }
         });
       }
 
-      // Send the tool responses back to the model
-      response = await chat.sendMessage(functionResponses);
+      result = await chat.sendMessage(functionResponses);
     }
 
-    return response.text;
+    return result.response.text();
   } catch (error) {
     console.error('LLM Error:', error);
     throw new Error('Failed to process message with AI assistant.');
