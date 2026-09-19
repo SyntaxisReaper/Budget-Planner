@@ -216,7 +216,7 @@ img { display: block; max-width: 100%; }
 .btn:active { transform: scale(0.96); }
 
 .btn-primary {
-  background: var(--grad-primary);
+  background: var(--color-primary);
   color: #fff;
   border: none;
   box-shadow: var(--shadow-primary);
