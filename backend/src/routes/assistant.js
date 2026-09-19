@@ -1,10 +1,10 @@
 import express from 'express';
 import { processChatMessage } from '../services/llmService.js';
-import { requireAuth } from '../middleware/auth.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/chat', requireAuth, async (req, res) => {
+router.post('/chat', authenticate, async (req, res) => {
   const { message, history } = req.body;
   const userId = req.userId;
 
