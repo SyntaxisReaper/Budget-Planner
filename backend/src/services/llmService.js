@@ -61,7 +61,7 @@ Always use the provided tools to take actions or retrieve data on behalf of the 
     }));
 
     const model = ai.getGenerativeModel({
-      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
       systemInstruction,
       tools: geminiTools,
       generationConfig: { temperature: 0.3 }

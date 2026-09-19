@@ -12,6 +12,10 @@
     - Fixed a layout bug in the Budget Planner that caused text boxes to stretch across the screen on mobile devices.
     - Fixed a state synchronization issue where previously saved budget allocations wouldn't populate into the input boxes upon page load.
     - Fixed an "Invalid target_type" API error that prevented users from allocating budget amounts towards their Subscriptions.
+  - **AI Assistant Enhancements:**
+    - Upgraded AI model to **Gemini 3.5 Flash** (via `@google/generative-ai` SDK) to resolve HTTP 400 and 404 SDK errors and provide highly responsive chat.
+    - Made the target model configurable via `GEMINI_MODEL` environment variable.
+    - Fixed a critical frontend rendering crash (white screen) occurring when processing the AI's chat response.
 
 - **UX/UI Polish (v5.1.0):**
   - **Procedural Web Audio Engine:** Added satisfying haptic-synced UI sounds (cha-ching, chimes) for goals and debts, with a global mute toggle.
