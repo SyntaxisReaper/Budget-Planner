@@ -95,16 +95,16 @@ export default function GoalProgressCard({ goal, onEdit, onDelete }) {
         </motion.div>
       )}
 
-      <div className="flex gap-2 mt-5">
+      <div className="flex gap-4 mt-5" style={{ borderTop: '1px solid var(--color-border)', paddingTop: '12px', justifyContent: 'flex-end' }}>
         {onEdit && (
-          <motion.button id={`goal-edit-${goal.id}`} className="btn btn-ghost btn-sm" onClick={() => onEdit(goal)} whileHover={{ scale: 1.05 }} whileTap={tapFeedback} onTapStart={impactLight}>
+          <div id={`goal-edit-${goal.id}`} style={{ color: 'var(--color-text-2)', cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: 500 }} onClick={() => onEdit(goal)}>
             Edit
-          </motion.button>
+          </div>
         )}
         {onDelete && (
-          <motion.button id={`goal-delete-${goal.id}`} className="btn btn-danger btn-sm" onClick={() => onDelete(goal.id)} whileHover={{ scale: 1.05 }} whileTap={tapFeedback} onTapStart={impactLight}>
+          <div id={`goal-delete-${goal.id}`} style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: 500 }} onClick={() => onDelete(goal.id)}>
             Delete
-          </motion.button>
+          </div>
         )}
       </div>
     </motion.div>

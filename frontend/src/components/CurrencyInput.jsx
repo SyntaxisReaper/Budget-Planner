@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 const fmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
 
-export default function CurrencyInput({ value, onChange, onBlur, placeholder, className, required }) {
+export default function CurrencyInput({ value, onChange, onBlur, placeholder, className, required, ...props }) {
   const [displayValue, setDisplayValue] = useState('');
 
   // Sync incoming value to display text when it changes externally
@@ -10,14 +10,8 @@ export default function CurrencyInput({ value, onChange, onBlur, placeholder, cl
     if (value === '' || value === null || value === undefined) {
       setDisplayValue('');
     } else {
-      // Only format if the user isn't currently typing a decimal or trailing zeros
-      // To prevent jumping cursors, we only format when the value is set externally or on blur
-      // Actually, we can just keep the value as is if it's currently focused, but for live formatting
-      // we format it immediately.
-      
       const num = parseFloat(value);
       if (!isNaN(num)) {
-        // We only want to set displayValue if it's out of sync to avoid overriding mid-typing e.g. "10."
         const currentNum = parseFloat(displayValue.replace(/,/g, ''));
         if (currentNum !== num) {
            setDisplayValue(fmt.format(num));
@@ -67,6 +61,7 @@ export default function CurrencyInput({ value, onChange, onBlur, placeholder, cl
       onChange={handleChange}
       onBlur={handleBlur}
       required={required}
+      {...props}
     />
   );
 }
