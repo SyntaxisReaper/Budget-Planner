@@ -20,6 +20,7 @@ import tasksRoutes from './routes/tasks.js';
 import notesRoutes from './routes/notes.js';
 import linksRoutes from './routes/links.js';
 import tripsRoutes from './routes/trips.js';
+import assistantRoutes from './routes/assistant.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -59,6 +60,7 @@ app.use('/api/tasks', tasksRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/links', linksRoutes);
 app.use('/api/trips', tripsRoutes);
+app.use('/api/assistant', assistantRoutes);
 
 // Global error handler
 app.use((err, _req, res, _next) => {

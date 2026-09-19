@@ -44,6 +44,7 @@ const Contacts = lazy(() => import('./pages/Contacts.jsx'));
 const Trips = lazy(() => import('./pages/Trips.jsx'));
 const TripDetail = lazy(() => import('./pages/TripDetail.jsx'));
 const PayLink = lazy(() => import('./pages/PayLink.jsx'));
+const Assistant = lazy(() => import('./pages/Assistant.jsx'));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -112,6 +113,7 @@ function AnimatedRoutes() {
         <Route path="/settings"     element={<PageWrapper><Settings /></PageWrapper>} />
         <Route path="/subscriptions" element={<PageWrapper><Subscriptions /></PageWrapper>} />
         <Route path="/contacts"     element={<PageWrapper><Contacts /></PageWrapper>} />
+        <Route path="/assistant"    element={<PageWrapper><Assistant /></PageWrapper>} />
         <Route path="/people-ledger" element={<PageWrapper><PeopleLedger /></PageWrapper>} />
         <Route path="/tasks"        element={<PageWrapper><Tasks /></PageWrapper>} />
         <Route path="/notes"        element={<PageWrapper><Notes /></PageWrapper>} />
