@@ -4,6 +4,19 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+router.get('/models', async (req, res) => {
+  try {
+    const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`);
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/chat', authenticate, async (req, res) => {
   const { message, history } = req.body;
   const userId = req.userId;
