@@ -10,7 +10,7 @@ import { Lock } from 'lucide-react';
 
 import { useSupabaseAuth } from './hooks/useSupabaseAuth.js';
 import { useVersionCheck } from './hooks/useVersionCheck.js';
-import { useSubscriptions, useAccounts, useDebts } from './hooks/useBudget.js';
+import { useSubscriptions, useAccounts, useDebts, useContacts } from './hooks/useBudget.js';
 import { useTrips } from './hooks/useTrips.js';
 import { requestNotificationPermissions, scheduleUpcomingReminders, checkLowBalance, notifyDebtPaid } from './lib/notifications.js';
 import toast, { triggerCelebration } from './lib/haptics.js';
@@ -129,6 +129,7 @@ function AnimatedRoutes() {
 
 import { App as CapacitorApp } from '@capacitor/app';
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { Preferences } from '@capacitor/preferences';
 
 function NativeIntegration() {
   const navigate = useNavigate();
@@ -166,9 +167,17 @@ function NativeIntegration() {
         navigate(-1);
       }
     });
+
+    // Deep link handling for Quick Add Widget
+    const urlSub = CapacitorApp.addListener('appUrlOpen', data => {
+      if (data.url.includes('budgetapp://add-transaction')) {
+        navigate('/transactions?add=true');
+      }
+    });
     
     return () => {
       sub.then(listener => listener.remove());
+      urlSub.then(listener => listener.remove());
     };
   }, [navigate]);
 
@@ -180,11 +189,13 @@ function NotificationManager() {
   const { query: accQuery } = useAccounts();
   const { query: debtQuery } = useDebts();
   const { query: tripQuery } = useTrips();
+  const { query: contactQuery } = useContacts();
   
   const subscriptions = subQuery.data;
   const accounts = accQuery.data;
   const debts = debtQuery.data;
   const trips = tripQuery.data;
+  const contacts = contactQuery.data;
 
   // Track notified states to prevent spam
   const [notifiedLowAccounts, setNotifiedLowAccounts] = useState(new Set());
@@ -197,13 +208,18 @@ function NotificationManager() {
   }, []);
 
   useEffect(() => {
-    if (subscriptions && debts && trips) {
-      scheduleUpcomingReminders(subscriptions, debts, trips);
+    if (subscriptions && debts && trips && contacts) {
+      scheduleUpcomingReminders(subscriptions, debts, trips, contacts);
     }
-  }, [subscriptions, debts, trips]);
+  }, [subscriptions, debts, trips, contacts]);
 
   useEffect(() => {
     if (accounts) {
+      if (Capacitor.isNativePlatform()) {
+        const total = accounts.reduce((sum, acc) => sum + Number(acc.current_balance), 0);
+        Preferences.set({ key: 'total_balance', value: total.toString() });
+      }
+
       const thresholdStr = localStorage.getItem('low_balance_threshold');
       if (thresholdStr) {
         const threshold = parseFloat(thresholdStr);

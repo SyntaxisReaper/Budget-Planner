@@ -33,7 +33,7 @@ export async function requestNotificationPermissions() {
   }
 }
 
-export async function scheduleUpcomingReminders(subscriptions = [], debts = [], trips = []) {
+export async function scheduleUpcomingReminders(subscriptions = [], debts = [], trips = [], contacts = []) {
   if (!Capacitor.isNativePlatform()) return;
   const granted = await requestNotificationPermissions();
   if (!granted) return;
@@ -45,6 +45,7 @@ export async function scheduleUpcomingReminders(subscriptions = [], debts = [], 
     const notificationsToSchedule = [];
     let idCounter = 1;
     const today = new Date();
+    const currentYear = today.getFullYear();
 
     const addReminder = (title, body, dueDate) => {
       const scheduleDate = addDays(parseISO(dueDate || new Date().toISOString()), -1);
@@ -57,6 +58,30 @@ export async function scheduleUpcomingReminders(subscriptions = [], debts = [], 
           body,
           schedule: { at: scheduleDate },
           channelId: 'bills'
+        });
+      }
+    };
+
+    const addYearlyReminder = (title, body, dateStr) => {
+      if (!dateStr) return;
+      const originalDate = parseISO(dateStr);
+      if (isNaN(originalDate.getTime())) return;
+      
+      let eventDate = new Date(currentYear, originalDate.getMonth(), originalDate.getDate());
+      if (isBefore(eventDate, today)) {
+        eventDate = new Date(currentYear + 1, originalDate.getMonth(), originalDate.getDate());
+      }
+
+      const scheduleDate = addDays(eventDate, -1);
+      scheduleDate.setHours(10, 0, 0, 0);
+
+      if (differenceInDays(scheduleDate, today) <= 30 && !isBefore(scheduleDate, today)) {
+        notificationsToSchedule.push({
+          id: idCounter++,
+          title,
+          body,
+          schedule: { at: scheduleDate },
+          channelId: 'celebrations'
         });
       }
     };
@@ -76,6 +101,15 @@ export async function scheduleUpcomingReminders(subscriptions = [], debts = [], 
     trips.forEach(trip => {
       if (trip.status === 'planned' && trip.start_date) {
         addReminder('Upcoming Trip', `Get ready! ${trip.name} starts tomorrow.`, trip.start_date);
+      }
+    });
+
+    contacts.forEach(contact => {
+      if (contact.birthday) {
+        addYearlyReminder('Birthday Tomorrow 🎂', `It's ${contact.name}'s birthday tomorrow! Don't forget to wish them.`, contact.birthday);
+      }
+      if (contact.anniversary) {
+        addYearlyReminder('Anniversary Tomorrow 🎉', `It's ${contact.name}'s anniversary tomorrow!`, contact.anniversary);
       }
     });
 

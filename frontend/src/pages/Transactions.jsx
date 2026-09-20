@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { TableVirtuoso } from 'react-virtuoso';
 import { Plus, Filter, ArrowRightLeft, Banknote } from 'lucide-react';
 import { useTransactions, useItems, useAccounts, useDebts, useGoals, useSettings, useCategorizationTrainingData } from '../hooks/useBudget.js';
@@ -217,7 +218,8 @@ export default function Transactions() {
   const queryClient = useQueryClient();
   const { executeUndoable } = useUndoableAction();
   const [month, setMonth] = useState(new Date().toISOString().substring(0, 7));
-  const [showModal, setShowModal] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [showModal, setShowModal] = useState(searchParams.get('add') === 'true');
   const [typeFilter, setTypeFilter] = useState('all');
   const [accountFilter, setAccountFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
