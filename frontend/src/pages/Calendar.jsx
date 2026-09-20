@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useCalendarEvents } from '../hooks/useBudget.js';
-import { Calendar as CalendarIcon, CheckSquare, Plane, Repeat, CreditCard, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckSquare, Plane, Repeat, CreditCard, ChevronRight, ChevronLeft, Cake } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { staggerContainer, itemVariants } from '../lib/motion.js';
 import { 
@@ -22,14 +22,16 @@ export default function Calendar() {
     if (type === 'trip') return <Plane size={16} />;
     if (type === 'subscription') return <Repeat size={16} />;
     if (type === 'debt') return <CreditCard size={16} />;
+    if (type === 'birthday') return <Cake size={16} />;
     return <CalendarIcon size={16} />;
   };
 
   const getEventColor = (type) => {
     if (type === 'task') return 'var(--color-primary)';
-    if (type === 'trip') return '#FF9800'; // Orange
-    if (type === 'subscription') return '#E91E63'; // Pink
+    if (type === 'trip') return '#FF9800';
+    if (type === 'subscription') return '#E91E63';
     if (type === 'debt') return 'var(--color-error)';
+    if (type === 'birthday') return '#A855F7'; // Purple
     return 'var(--color-text)';
   };
 
@@ -38,6 +40,7 @@ export default function Calendar() {
     if (event.type === 'trip') navigate(`/trips/${event.originalId}`);
     if (event.type === 'subscription') navigate('/subscriptions');
     if (event.type === 'debt') navigate('/debts');
+    if (event.type === 'birthday') navigate('/contacts');
   };
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));

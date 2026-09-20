@@ -410,11 +410,12 @@ export function useCalendarEvents() {
   const query = useQuery({
     queryKey: ['calendarEvents'],
     queryFn: async () => {
-      const [debts, subs, trips, tasks] = await Promise.all([
+      const [debts, subs, trips, tasks, contacts] = await Promise.all([
         apiClient.get('/debts'),
         apiClient.get('/subscriptions'),
         apiClient.get('/trips'),
-        apiClient.get('/tasks')
+        apiClient.get('/tasks'),
+        apiClient.get('/people')
       ]);
 
       const events = [];
@@ -470,6 +471,29 @@ export function useCalendarEvents() {
             date: d.due_date,
             amount: d.amount,
             originalId: d.id
+          });
+        }
+      });
+
+      // Add birthdays — project to the NEXT upcoming occurrence regardless of birth year
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      (contacts?.data || []).forEach(c => {
+        if (c.birthday) {
+          const bday = new Date(c.birthday);
+          // Build this year's occurrence
+          let nextBday = new Date(today.getFullYear(), bday.getUTCMonth(), bday.getUTCDate());
+          // If it has already passed this year, push to next year
+          if (nextBday < today) {
+            nextBday = new Date(today.getFullYear() + 1, bday.getUTCMonth(), bday.getUTCDate());
+          }
+          const age = nextBday.getFullYear() - bday.getUTCFullYear();
+          events.push({
+            id: `birthday-${c.id}`,
+            type: 'birthday',
+            title: `🎂 ${c.name}'s Birthday (turns ${age})`,
+            date: nextBday.toISOString().split('T')[0],
+            originalId: c.id
           });
         }
       });
