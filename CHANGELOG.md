@@ -1,7 +1,18 @@
 # Budget Planner - Changelog & Feature Summary
 
-## Version 5.x.x - Personal Assistant & Unified Architecture
-*Current Version: v5.1.1*
+## Version 5.2.0 - Widgets, Connections & Calendar Grid
+*Current Version: v5.2.0*
+
+- **Android Home-Screen Widgets:**
+  - **Quick Add:** A 2x1 minimalist widget with a single button that deep links (`budgetapp://add-transaction`) straight to the transaction modal without launching the full app.
+  - **Accounts Widget:** A 3x2 resizable native list widget that parses `accounts_data` from Capacitor SharedPreferences via a background `RemoteViewsService`, showing real-time account balances on your home screen.
+- **Calendar Redesign:** Refactored the Calendar page from an agenda view to a beautiful, native-feeling month grid using `date-fns`. Displays colored event dots and reveals an event list directly beneath the active day.
+- **Contacts Hub Enhancements:**
+  - **Birthday & Anniversary tracking:** Added new date fields to the `people` table.
+  - **Local Push Notifications:** Integrated `capacitor-local-notifications` to silently trigger an Android push notification for a contact's birthday/anniversary a day in advance at 10 AM, without requiring a backend cron job.
+
+## Version 5.1.x - Personal Assistant & Unified Architecture
+*Previous Version: v5.1.1*
 
 - **Visual & Layout Improvements (v5.1.1):**
   - **Branding Alignment:** Updated primary buttons and application accents to strictly match the logo's dark olive color scheme.
