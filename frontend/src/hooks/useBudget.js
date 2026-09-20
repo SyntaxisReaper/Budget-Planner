@@ -124,6 +124,7 @@ export function useDebts() {
     onSuccess: () => {
       triggerHaptic();
       queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
     }
   });
 
@@ -132,12 +133,16 @@ export function useDebts() {
     onSuccess: () => {
       triggerHaptic();
       queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
     }
   });
 
   const remove = useMutation({
     mutationFn: (id) => apiClient.delete(`/debts/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['debts'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
+    },
   });
 
   return { query, create, update, remove };
@@ -256,6 +261,7 @@ export function useSubscriptions() {
     onSuccess: () => {
       triggerHaptic();
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
     }
   });
 
@@ -264,6 +270,7 @@ export function useSubscriptions() {
     onSuccess: () => {
       triggerHaptic();
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
     }
   });
 
@@ -272,6 +279,7 @@ export function useSubscriptions() {
     onSuccess: () => {
       triggerHaptic();
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['calendarEvents'] });
     }
   });
 
@@ -325,17 +333,17 @@ export function useContacts() {
 
   const create = useMutation({
     mutationFn: (data) => apiClient.post('/people', data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contacts'] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contacts'] }); queryClient.invalidateQueries({ queryKey: ['calendarEvents'] }); },
   });
 
   const update = useMutation({
     mutationFn: ({ id, ...data }) => apiClient.put(`/people/${id}`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contacts'] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contacts'] }); queryClient.invalidateQueries({ queryKey: ['calendarEvents'] }); },
   });
 
   const remove = useMutation({
     mutationFn: (id) => apiClient.delete(`/people/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contacts'] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contacts'] }); queryClient.invalidateQueries({ queryKey: ['calendarEvents'] }); },
   });
 
   return { query, create, update, remove };
@@ -347,17 +355,17 @@ export function useTasks() {
 
   const create = useMutation({
     mutationFn: (data) => apiClient.post('/tasks', data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tasks'] }); queryClient.invalidateQueries({ queryKey: ['calendarEvents'] }); },
   });
 
   const update = useMutation({
     mutationFn: ({ id, ...data }) => apiClient.put(`/tasks/${id}`, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tasks'] }); queryClient.invalidateQueries({ queryKey: ['calendarEvents'] }); },
   });
 
   const remove = useMutation({
     mutationFn: (id) => apiClient.delete(`/tasks/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tasks'] }); queryClient.invalidateQueries({ queryKey: ['calendarEvents'] }); },
   });
 
   return { query, create, update, remove };
