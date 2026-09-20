@@ -421,6 +421,40 @@ img { display: block; max-width: 100%; }
   .bottom-tab-link.active::after {
     transform: translateX(-50%) scale(1);
   }
+
+  /* FAB wrapper — the center slot that reserves space in the flex row */
+  .bottom-fab-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  /* The actual floating button */
+  .bottom-fab {
+    position: absolute;
+    bottom: 12px; /* lift above navbar */
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #5fff9e 0%, #00e676 100%);
+    color: #0a1a0f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0, 230, 118, 0.55), 0 2px 8px rgba(0,0,0,0.25);
+    z-index: 410;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: box-shadow 0.2s ease;
+  }
+
+  .bottom-fab:hover {
+    box-shadow: 0 6px 28px rgba(0, 230, 118, 0.7), 0 4px 12px rgba(0,0,0,0.3);
+  }
 }
 
 .sidebar-logo {

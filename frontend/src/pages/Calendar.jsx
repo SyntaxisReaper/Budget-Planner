@@ -96,16 +96,16 @@ export default function Calendar() {
             </div>
 
             {/* Day names */}
-            <div className="grid grid-cols-7 mb-2">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '8px' }}>
               {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(day => (
-                <div key={day} className="text-center text-xs font-semibold text-muted uppercase">
+                <div key={day} style={{ textAlign: 'center', fontSize: '11px', fontWeight: '600', color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {day}
                 </div>
               ))}
             </div>
 
             {/* Days grid */}
-            <div className="grid grid-cols-7 gap-y-2">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', rowGap: '4px' }}>
               {daysInGrid.map((day, idx) => {
                 const dateStr = format(day, 'yyyy-MM-dd');
                 const dayEvents = eventsByDate[dateStr] || [];
@@ -114,26 +114,37 @@ export default function Calendar() {
                 const isTodayDate = isToday(day);
 
                 return (
-                  <div key={idx} className="flex justify-center items-center h-10 relative">
+                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '40px', position: 'relative' }}>
                     <button
                       onClick={() => setSelectedDate(day)}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-colors
-                        ${!isCurrentMonth ? 'text-muted opacity-50' : ''}
-                        ${isSelected ? 'bg-primary text-white font-bold' : ''}
-                        ${isTodayDate && !isSelected ? 'border border-primary text-primary' : ''}
-                      `}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '13px',
+                        fontWeight: isSelected ? '700' : '400',
+                        border: isTodayDate && !isSelected ? '2px solid var(--color-primary)' : '2px solid transparent',
+                        background: isSelected ? 'var(--color-primary)' : 'transparent',
+                        color: isSelected ? '#fff' : !isCurrentMonth ? 'var(--color-text-3)' : isTodayDate ? 'var(--color-primary)' : 'var(--color-text)',
+                        opacity: !isCurrentMonth ? 0.4 : 1,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        outline: 'none',
+                      }}
                     >
                       {format(day, 'd')}
                     </button>
                     
                     {/* Event indicators (dots) */}
                     {dayEvents.length > 0 && (
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex gap-[2px]">
+                      <div style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '2px' }}>
                         {dayEvents.slice(0, 3).map((e, i) => (
                           <div 
                             key={i} 
-                            className="w-1 h-1 rounded-full" 
-                            style={{ background: getEventColor(e.type) }} 
+                            style={{ width: '4px', height: '4px', borderRadius: '50%', background: getEventColor(e.type) }} 
                           />
                         ))}
                       </div>

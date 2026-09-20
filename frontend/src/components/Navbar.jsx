@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { impactLight } from '../lib/haptics.js';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ReceiptText, ShoppingCart,
-  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Landmark, Repeat, User, Bell, Plane, Calendar, CheckSquare, FileText, Users, Grid, X, MessageSquare
+  CreditCard, Target, Calculator, BarChart3, LogOut, Settings as SettingsIcon, Wallet, Landmark, Repeat, User, Bell, Plane, Calendar, CheckSquare, FileText, Users, Grid, X, MessageSquare, Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { slideInLeft, tapFeedback, backdropVariants, modalVariants } from '../lib/motion.js';
@@ -47,15 +47,19 @@ const navGroups = [
   }
 ];
 
-const bottomTabs = [
-  { to: '/',             icon: LayoutDashboard, label: 'Home'    },
-  { to: '/calendar',     icon: Calendar,        label: 'Calendar'},
-  { to: '/tasks',        icon: CheckSquare,     label: 'Tasks'   },
-  { to: '/debts',        icon: CreditCard,      label: 'Debts'   },
+const bottomTabsLeft = [
+  { to: '/',             icon: LayoutDashboard, label: 'Home'     },
+  { to: '/calendar',     icon: Calendar,        label: 'Calendar' },
+];
+
+const bottomTabsRight = [
+  { to: '/debts',        icon: CreditCard,      label: 'Debts'    },
+  { to: '/tasks',        icon: CheckSquare,     label: 'Tasks'    },
 ];
 
 export default function Navbar({ user, onSignOut }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
   const initials = user?.email?.slice(0, 2).toUpperCase() || 'ME';
 
   return (
@@ -140,7 +144,7 @@ export default function Navbar({ user, onSignOut }) {
 
       {/* Mobile Bottom Tab Bar */}
       <nav className="bottom-tab-bar">
-        {bottomTabs.map(({ to, icon: Icon, label }) => (
+        {bottomTabsLeft.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
@@ -152,6 +156,37 @@ export default function Navbar({ user, onSignOut }) {
             <span>{label}</span>
           </NavLink>
         ))}
+
+        {/* Floating FAB center */}
+        <div className="bottom-fab-wrapper">
+          <motion.button
+            className="bottom-fab"
+            onClick={() => {
+              impactLight();
+              navigate('/transactions?add=true');
+              setMobileMenuOpen(false);
+            }}
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.08 }}
+            aria-label="Log Transaction"
+          >
+            <Plus size={26} strokeWidth={2.5} />
+          </motion.button>
+        </div>
+
+        {bottomTabsRight.map(({ to, icon: Icon, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={to === '/'}
+            className={({ isActive }) => `bottom-tab-link${isActive && !mobileMenuOpen ? ' active' : ''}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <Icon size={22} />
+            <span>{label}</span>
+          </NavLink>
+        ))}
+
         <button 
           className={`bottom-tab-link ${mobileMenuOpen ? 'active' : ''}`}
           onClick={() => {
