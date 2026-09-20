@@ -351,12 +351,12 @@ export function useTasks() {
   });
 
   const update = useMutation({
-    mutationFn: ({ id, ...data }) => apiClient.put(/tasks/, data),
+    mutationFn: ({ id, ...data }) => apiClient.put(`/tasks/${id}`, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
   });
 
   const remove = useMutation({
-    mutationFn: (id) => apiClient.delete(/tasks/),
+    mutationFn: (id) => apiClient.delete(`/tasks/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
   });
 
@@ -373,12 +373,12 @@ export function useNotes() {
   });
 
   const update = useMutation({
-    mutationFn: ({ id, ...data }) => apiClient.put(/notes/, data),
+    mutationFn: ({ id, ...data }) => apiClient.put(`/notes/${id}`, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notes'] }),
   });
 
   const remove = useMutation({
-    mutationFn: (id) => apiClient.delete(/notes/),
+    mutationFn: (id) => apiClient.delete(`/notes/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notes'] }),
   });
 
@@ -398,7 +398,7 @@ export function useLinks(params = {}) {
   });
 
   const remove = useMutation({
-    mutationFn: (id) => apiClient.delete(/links/),
+    mutationFn: (id) => apiClient.delete(`/links/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['links'] }),
   });
 
@@ -505,4 +505,50 @@ export function useCalendarEvents() {
   });
 
   return { query };
+}
+
+export function useProjects() {
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['projects'], queryFn: () => apiClient.get('/projects') });
+
+  const create = useMutation({
+    mutationFn: (data) => apiClient.post('/projects', data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
+  });
+
+  const update = useMutation({
+    mutationFn: ({ id, ...data }) => apiClient.put(`/projects/${id}`, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id) => apiClient.delete(`/projects/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
+  });
+
+  return { query, create, update, remove };
+}
+
+export function useTaskComments(taskId) {
+  const queryClient = useQueryClient();
+  const query = useQuery({ 
+    queryKey: ['task_comments', taskId], 
+    queryFn: () => apiClient.get(`/task_comments/${taskId}`),
+    enabled: !!taskId
+  });
+
+  const create = useMutation({
+    mutationFn: ({ taskId, text }) => apiClient.post(`/task_comments/${taskId}`, { text }),
+    onSuccess: (_, variables) => queryClient.invalidateQueries({ queryKey: ['task_comments', variables.taskId] }),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id) => apiClient.delete(`/task_comments/${id}`),
+    onSuccess: () => {
+      // Need to invalidate everything for task_comments if we don't know the taskId
+      queryClient.invalidateQueries({ queryKey: ['task_comments'] });
+    },
+  });
+
+  return { query, create, remove };
 }

@@ -20,6 +20,8 @@ import tasksRoutes from './routes/tasks.js';
 import notesRoutes from './routes/notes.js';
 import linksRoutes from './routes/links.js';
 import tripsRoutes from './routes/trips.js';
+import projectsRouter from './routes/projects.js';
+import taskCommentsRouter from './routes/task_comments.js';
 import assistantRoutes from './routes/assistant.js';
 
 const app = express();
@@ -60,6 +62,8 @@ app.use('/api/tasks', tasksRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/links', linksRoutes);
 app.use('/api/trips', tripsRoutes);
+app.use('/api/projects', projectsRouter);
+app.use('/api/task_comments', taskCommentsRouter);
 app.use('/api/assistant', assistantRoutes);
 
 // Global error handler

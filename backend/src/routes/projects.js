@@ -5,10 +5,10 @@ import { authenticate } from '../middleware/auth.js';
 const router = Router();
 router.use(authenticate);
 
-// Get all tasks
+// Get all projects
 router.get('/', async (req, res) => {
   const { data, error } = await supabase
-    .from('tasks')
+    .from('projects')
     .select('*')
     .eq('user_id', req.userId)
     .order('created_at', { ascending: false });
@@ -17,23 +17,17 @@ router.get('/', async (req, res) => {
   res.json(data);
 });
 
-// Create a task
+// Create a project
 router.post('/', async (req, res) => {
-  const { title, description, priority, due_date, status, project_id, assignee_id, tags } = req.body;
-  if (!title) return res.status(400).json({ error: 'Title is required' });
+  const { name, color } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
 
   const { data, error } = await supabase
-    .from('tasks')
+    .from('projects')
     .insert([{ 
       user_id: req.userId, 
-      title, 
-      description: description || null, 
-      priority: priority || 'normal', 
-      due_date: due_date || null,
-      status: status || 'pending',
-      project_id: project_id || null,
-      assignee_id: assignee_id || null,
-      tags: tags || []
+      name, 
+      color: color || null
     }])
     .select()
     .single();
@@ -42,12 +36,12 @@ router.post('/', async (req, res) => {
   res.status(201).json(data);
 });
 
-// Update a task
+// Update a project
 router.put('/:id', async (req, res) => {
-  const { title, description, priority, due_date, status, project_id, assignee_id, tags } = req.body;
+  const { name, color } = req.body;
   const { data, error } = await supabase
-    .from('tasks')
-    .update({ title, description, priority, due_date, status, project_id, assignee_id, tags })
+    .from('projects')
+    .update({ name, color })
     .eq('id', req.params.id)
     .eq('user_id', req.userId)
     .select()
@@ -57,10 +51,10 @@ router.put('/:id', async (req, res) => {
   res.json(data);
 });
 
-// Delete a task
+// Delete a project
 router.delete('/:id', async (req, res) => {
   const { error } = await supabase
-    .from('tasks')
+    .from('projects')
     .delete()
     .eq('id', req.params.id)
     .eq('user_id', req.userId);
