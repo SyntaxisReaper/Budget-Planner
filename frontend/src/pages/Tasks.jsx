@@ -1,67 +1,42 @@
 import { useState, useMemo } from 'react';
 import { useTasks, useProjects, useContacts } from '../hooks/useBudget.js';
-import { Plus, CheckSquare, Search, Bell, Paperclip, MessageSquare, Circle, CheckCircle, Trash2, Calendar as CalendarIcon, User, ChevronDown, List, LayoutGrid, CalendarDays } from 'lucide-react';
+import { Plus, CheckSquare, Search, Bell, Paperclip, MessageSquare, Trash2, Calendar as CalendarIcon, User, ChevronDown, List, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { staggerContainer, itemVariants } from '../lib/motion.js';
-import { impactLight } from '../lib/haptics.js';
 import { format } from 'date-fns';
 import TaskModal from '../components/TaskModal.jsx';
 
-function TaskCard({ task, onClick, contacts, remove }) {
-  const getPriorityColor = (p) => {
-    if (p === 'high') return 'var(--color-error)';
-    if (p === 'low') return 'var(--color-success)';
-    return 'var(--color-primary)';
-  };
-
-  const assignee = contacts.find(c => c.id === task.assignee_id);
-
+function TaskCard({ task, onClick, remove }) {
   return (
-    <motion.div variants={itemVariants} className="card p-4 flex flex-col gap-3 cursor-pointer relative group" onClick={onClick}>
+    <motion.div 
+      variants={itemVariants} 
+      className="bg-white rounded-2xl p-4 flex flex-col gap-3 shadow-sm border border-border/50 cursor-pointer relative group" 
+      onClick={onClick}
+    >
       <div className="flex justify-between items-start gap-3">
-        <h4 className="font-bold text-sm leading-snug">{task.title}</h4>
-        <button onClick={(e) => { e.stopPropagation(); if(confirm('Delete?')) remove.mutate(task.id); }} className="text-muted opacity-0 group-hover:opacity-100 transition-opacity">
+        <h4 className="font-bold text-[15px] text-[var(--color-text)] leading-snug">{task.title}</h4>
+        <button 
+          onClick={(e) => { e.stopPropagation(); if(confirm('Delete?')) remove.mutate(task.id); }} 
+          className="text-muted p-1 border border-border rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+        >
           <Trash2 size={14} />
         </button>
       </div>
       
-      <div className="flex items-center gap-2 mt-1 flex-wrap">
-        <div 
-          className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border" 
-          style={{ 
-            color: getPriorityColor(task.priority), 
-            borderColor: getPriorityColor(task.priority),
-            backgroundColor: `${getPriorityColor(task.priority)}15`
-          }}
-        >
+      {task.priority && (
+        <div className="font-bold text-sm text-[var(--color-text)] mt-1 capitalize">
           {task.priority} Priority
         </div>
-        
-        {task.tags && task.tags.map(t => (
-          <div key={t} className="px-2 py-0.5 rounded-full text-[10px] bg-bg border border-border text-muted">
-            {t}
-          </div>
-        ))}
-      </div>
+      )}
 
-      <div className="flex items-center justify-between mt-2 pt-3 border-t border-border text-xs text-muted">
-        <div className="flex items-center gap-3">
-          {task.due_date && (
-            <span className="flex items-center gap-1">
-              <CalendarIcon size={12}/> {format(new Date(task.due_date), 'MMM d')}
-            </span>
-          )}
-          <span className="flex items-center gap-1"><Paperclip size={12}/> {Math.floor(Math.random() * 5)}</span>
-          <span className="flex items-center gap-1"><MessageSquare size={12}/> {Math.floor(Math.random() * 10)}</span>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {assignee && (
-            <div className="flex items-center gap-1 text-[10px]">
-              <User size={12} /> {assignee.name.split(' ')[0]}
-            </div>
-          )}
-        </div>
+      <div className="flex items-center gap-4 mt-2 text-xs text-muted font-medium">
+        {task.due_date && (
+          <span className="flex items-center gap-1.5">
+            <CalendarIcon size={12}/> {format(new Date(task.due_date), 'MMM d')}
+          </span>
+        )}
+        <span className="flex items-center gap-1.5"><Paperclip size={12}/> 3</span>
+        <span className="flex items-center gap-1.5"><MessageSquare size={12}/> 7</span>
       </div>
     </motion.div>
   );
@@ -70,7 +45,6 @@ function TaskCard({ task, onClick, contacts, remove }) {
 export default function Tasks() {
   const { query: tasksQuery, create, update, remove } = useTasks();
   const { query: projectsQuery, create: createProject } = useProjects();
-  const { query: contactsQuery } = useContacts();
   
   const [activeProject, setActiveProject] = useState('all');
   const [view, setView] = useState('list'); // list, board
@@ -79,7 +53,6 @@ export default function Tasks() {
   
   const tasks = tasksQuery.data || [];
   const projects = projectsQuery.data || [];
-  const contacts = contactsQuery.data || [];
 
   const filteredTasks = useMemo(() => {
     if (activeProject === 'all') return tasks;
@@ -109,63 +82,61 @@ export default function Tasks() {
   };
 
   return (
-    <div className="page pb-24 h-full flex flex-col">
-      <header className="page-header flex justify-between items-center mb-4 pt-2">
+    <div className="page pb-24 h-full flex flex-col bg-bg">
+      <header className="page-header flex justify-between items-center mb-6 pt-2">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary/20 text-primary rounded-xl flex items-center justify-center">
-            <CheckSquare size={20} />
-          </div>
           <div className="relative">
             <button 
-              className="flex items-center gap-2 text-xl font-bold" 
+              className="flex items-center gap-2 text-xl font-bold bg-white px-3 py-1.5 rounded-lg shadow-sm border border-border" 
               onClick={() => setProjectDropdownOpen(!isProjectDropdownOpen)}
             >
-              {currentProjectName} <ChevronDown size={20} className="text-muted" />
+              <CheckSquare size={18} />
+              {currentProjectName} <ChevronDown size={18} className="text-muted ml-1" />
             </button>
             {isProjectDropdownOpen && (
-              <div className="absolute top-full mt-2 left-0 w-48 bg-[var(--color-surface)] border border-border rounded-xl shadow-lg z-50 overflow-hidden">
-                <button className="w-full text-left px-4 py-3 hover:bg-bg border-b border-border" onClick={() => { setActiveProject('all'); setProjectDropdownOpen(false); }}>All Tasks</button>
+              <div className="absolute top-full mt-2 left-0 w-48 bg-white border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+                <button className="w-full text-left px-4 py-3 hover:bg-bg/50 border-b border-border text-sm font-medium" onClick={() => { setActiveProject('all'); setProjectDropdownOpen(false); }}>All Tasks</button>
                 {projects.map(p => (
-                  <button key={p.id} className="w-full text-left px-4 py-3 hover:bg-bg border-b border-border" onClick={() => { setActiveProject(p.id); setProjectDropdownOpen(false); }}>
+                  <button key={p.id} className="w-full text-left px-4 py-3 hover:bg-bg/50 border-b border-border text-sm font-medium" onClick={() => { setActiveProject(p.id); setProjectDropdownOpen(false); }}>
                     {p.name}
                   </button>
                 ))}
-                <button className="w-full text-left px-4 py-3 text-primary font-bold hover:bg-bg flex gap-2 items-center" onClick={() => { handleAddProject(); setProjectDropdownOpen(false); }}>
+                <button className="w-full text-left px-4 py-3 text-primary font-bold hover:bg-bg/50 flex gap-2 items-center text-sm" onClick={() => { handleAddProject(); setProjectDropdownOpen(false); }}>
                   <Plus size={16} /> New Project
                 </button>
               </div>
             )}
           </div>
         </div>
-        <div className="flex gap-3 text-muted">
+        <div className="flex gap-4 text-muted">
           <Search size={20} />
           <Bell size={20} />
         </div>
       </header>
 
-      {/* View Toggles */}
+      {/* View Toggles & Add button */}
       <div className="flex justify-between items-center mb-6">
-        <div className="flex gap-2">
-          <button className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${view === 'list' ? 'bg-primary/20 text-primary' : 'text-muted hover:bg-bg'}`} onClick={() => setView('list')}>
-            <List size={16} /> List
+        <div className="flex bg-white rounded-lg p-1 border border-border shadow-sm">
+          <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors ${view === 'list' ? 'bg-bg text-text' : 'text-muted'}`} onClick={() => setView('list')}>
+            <List size={14} /> List
           </button>
-          <button className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${view === 'board' ? 'bg-primary/20 text-primary' : 'text-muted hover:bg-bg'}`} onClick={() => setView('board')}>
-            <LayoutGrid size={16} /> Board
+          <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors ${view === 'board' ? 'bg-bg text-text' : 'text-muted'}`} onClick={() => setView('board')}>
+            <LayoutGrid size={14} /> Board
           </button>
         </div>
-        <button className="btn btn-primary btn-sm flex items-center gap-1" onClick={() => setEditingTask(null)}>
+        <button className="bg-[var(--color-text)] text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-md hover:opacity-90" onClick={() => setEditingTask(null)}>
           <Plus size={16} /> Add Task
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto hide-scrollbar -mx-4 px-4">
         {view === 'list' && (
-          <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="flex flex-col gap-8 pb-10">
+          <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="flex flex-col gap-6 pb-10">
             {/* TODO Section */}
             <div>
-              <h3 className="font-bold text-xs text-muted uppercase tracking-wider mb-3">To Do ({todoTasks.length})</h3>
+              <h3 className="font-bold text-[13px] text-text mb-3">To Do ({todoTasks.length})</h3>
               <div className="flex flex-col gap-3">
-                {todoTasks.map(task => <TaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} contacts={contacts} remove={remove} />)}
+                {todoTasks.map(task => <TaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} remove={remove} />)}
                 {todoTasks.length === 0 && <div className="text-muted text-sm py-2">No pending tasks.</div>}
               </div>
             </div>
@@ -173,21 +144,21 @@ export default function Tasks() {
             {/* IN PROGRESS Section */}
             {inProgressTasks.length > 0 && (
               <div>
-                <h3 className="font-bold text-xs text-muted uppercase tracking-wider mb-3 flex gap-2 items-center">
-                  In Progress <span className="px-2 py-0.5 bg-primary/20 text-primary rounded-full">{inProgressTasks.length}</span>
+                <h3 className="font-bold text-[13px] text-text mb-3 flex gap-2 items-center">
+                  In Progress <span className="text-muted font-normal">({inProgressTasks.length})</span>
                 </h3>
                 <div className="flex flex-col gap-3">
-                  {inProgressTasks.map(task => <TaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} contacts={contacts} remove={remove} />)}
+                  {inProgressTasks.map(task => <TaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} remove={remove} />)}
                 </div>
               </div>
             )}
 
             {/* COMPLETED Section */}
             {completedTasks.length > 0 && (
-              <div className="opacity-60">
-                <h3 className="font-bold text-xs text-muted uppercase tracking-wider mb-3">Completed ({completedTasks.length})</h3>
+              <div className="opacity-70">
+                <h3 className="font-bold text-[13px] text-text mb-3">Completed ({completedTasks.length})</h3>
                 <div className="flex flex-col gap-3">
-                  {completedTasks.map(task => <TaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} contacts={contacts} remove={remove} />)}
+                  {completedTasks.map(task => <TaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} remove={remove} />)}
                 </div>
               </div>
             )}
@@ -198,23 +169,23 @@ export default function Tasks() {
           <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-6 h-full items-start">
             {/* Board Columns */}
             <div className="min-w-[280px] flex-1 flex flex-col gap-3">
-              <h3 className="font-bold text-xs text-muted uppercase tracking-wider sticky top-0 bg-[var(--color-bg)] py-2 z-10">To Do <span className="ml-1 opacity-50">{todoTasks.length}</span></h3>
-              {todoTasks.map(task => <TaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} contacts={contacts} remove={remove} />)}
-              <button className="flex items-center gap-2 justify-center w-full py-3 border border-dashed border-border rounded-xl text-muted hover:bg-bg transition-colors mt-2" onClick={() => setEditingTask(null)}>
+              <h3 className="font-bold text-[13px] text-text sticky top-0 bg-bg py-2 z-10">To Do <span className="ml-1 opacity-50">{todoTasks.length}</span></h3>
+              {todoTasks.map(task => <TaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} remove={remove} />)}
+              <button className="flex items-center gap-2 justify-center w-full py-3 border border-dashed border-border rounded-xl text-muted hover:bg-white transition-colors mt-2 text-sm font-medium" onClick={() => setEditingTask(null)}>
                 <Plus size={16} /> Add Task
               </button>
             </div>
 
             <div className="min-w-[280px] flex-1 flex flex-col gap-3">
-              <h3 className="font-bold text-xs text-muted uppercase tracking-wider sticky top-0 bg-[var(--color-bg)] py-2 z-10 flex items-center gap-2">
-                In Progress <span className="w-2 h-2 rounded-full bg-primary"></span>
+              <h3 className="font-bold text-[13px] text-text sticky top-0 bg-bg py-2 z-10 flex items-center gap-2">
+                In Progress <span className="ml-1 opacity-50">{inProgressTasks.length}</span>
               </h3>
-              {inProgressTasks.map(task => <TaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} contacts={contacts} remove={remove} />)}
+              {inProgressTasks.map(task => <TaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} remove={remove} />)}
             </div>
 
             <div className="min-w-[280px] flex-1 flex flex-col gap-3 opacity-70">
-              <h3 className="font-bold text-xs text-muted uppercase tracking-wider sticky top-0 bg-[var(--color-bg)] py-2 z-10">Completed</h3>
-              {completedTasks.map(task => <TaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} contacts={contacts} remove={remove} />)}
+              <h3 className="font-bold text-[13px] text-text sticky top-0 bg-bg py-2 z-10">Completed <span className="ml-1 opacity-50">{completedTasks.length}</span></h3>
+              {completedTasks.map(task => <TaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} remove={remove} />)}
             </div>
           </div>
         )}
