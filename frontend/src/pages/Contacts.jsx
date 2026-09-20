@@ -8,7 +8,13 @@ import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../lib/utils.js';
 
 function ContactModal({ contact, onClose, onSave }) {
-  const [form, setForm] = useState({ name: contact?.name || '', email: contact?.email || '', phone: contact?.phone || '' });
+  const [form, setForm] = useState({ 
+    name: contact?.name || '', 
+    email: contact?.email || '', 
+    phone: contact?.phone || '',
+    birthday: contact?.birthday || '',
+    anniversary: contact?.anniversary || ''
+  });
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
@@ -34,15 +40,29 @@ function ContactModal({ contact, onClose, onSave }) {
             <input type="text" className="input" placeholder="Pratik" required autoFocus
               value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
           </div>
-          <div className="form-group">
-            <label className="label">Email (Optional)</label>
-            <input type="email" className="input" placeholder="pratik@example.com"
-              value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+          <div className="form-row">
+            <div className="form-group">
+              <label className="label">Email (Optional)</label>
+              <input type="email" className="input" placeholder="pratik@example.com"
+                value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label className="label">Phone (Optional)</label>
+              <input type="tel" className="input" placeholder="+91..."
+                value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+            </div>
           </div>
-          <div className="form-group">
-            <label className="label">Phone (Optional)</label>
-            <input type="tel" className="input" placeholder="+91..."
-              value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+          <div className="form-row">
+            <div className="form-group">
+              <label className="label">Birthday (Optional)</label>
+              <input type="date" className="input"
+                value={form.birthday} onChange={e => setForm({ ...form, birthday: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label className="label">Anniversary (Optional)</label>
+              <input type="date" className="input"
+                value={form.anniversary} onChange={e => setForm({ ...form, anniversary: e.target.value })} />
+            </div>
           </div>
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>

@@ -19,12 +19,20 @@ router.get('/', async (req, res) => {
 
 // Create a contact
 router.post('/', async (req, res) => {
-  const { name, avatar } = req.body;
+  const { name, avatar, email, phone, birthday, anniversary } = req.body;
   if (!name) return res.status(400).json({ error: 'Name is required' });
 
   const { data, error } = await supabase
     .from('people')
-    .insert([{ user_id: req.userId, name, avatar }])
+    .insert([{ 
+      user_id: req.userId, 
+      name, 
+      avatar,
+      email,
+      phone,
+      birthday: birthday || null,
+      anniversary: anniversary || null
+    }])
     .select()
     .single();
 
@@ -34,10 +42,17 @@ router.post('/', async (req, res) => {
 
 // Update a contact
 router.put('/:id', async (req, res) => {
-  const { name, avatar } = req.body;
+  const { name, avatar, email, phone, birthday, anniversary } = req.body;
   const { data, error } = await supabase
     .from('people')
-    .update({ name, avatar })
+    .update({ 
+      name, 
+      avatar,
+      email,
+      phone,
+      birthday: birthday || null,
+      anniversary: anniversary || null
+    })
     .eq('id', req.params.id)
     .eq('user_id', req.userId)
     .select()
