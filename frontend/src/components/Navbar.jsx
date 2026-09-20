@@ -53,7 +53,6 @@ const bottomTabsLeft = [
 ];
 
 const bottomTabsRight = [
-  { to: '/debts',        icon: CreditCard,      label: 'Debts'    },
   { to: '/tasks',        icon: CheckSquare,     label: 'Tasks'    },
 ];
 
