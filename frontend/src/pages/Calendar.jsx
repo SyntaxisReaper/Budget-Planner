@@ -77,8 +77,20 @@ export default function Calendar() {
     return map;
   }, [events]);
 
+  if (query.isError) {
+    return (
+      <div className="page flex items-center justify-center h-full">
+        <div className="text-center p-8 bg-surface rounded-2xl">
+          <CalendarIcon size={48} className="mx-auto opacity-20 mb-4" />
+          <h2 className="text-lg font-bold mb-2">Couldn't load some events</h2>
+          <p className="text-muted text-sm">We ran into an issue fetching your calendar. Please try refreshing.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="page pb-24">
+    <div className="page pb-24 h-full flex flex-col bg-bg">
       <header className="page-header flex justify-between items-center mb-6">
         <div>
           <h1 className="page-title">Calendar</h1>
