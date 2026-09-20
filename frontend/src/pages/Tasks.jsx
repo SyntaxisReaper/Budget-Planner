@@ -10,7 +10,7 @@ function TaskCard({ task, onClick, remove }) {
   return (
     <motion.div 
       variants={itemVariants} 
-      className="bg-white rounded-2xl p-4 flex flex-col gap-3 shadow-sm border border-border/50 cursor-pointer relative group" 
+      className="card card-sm flex flex-col gap-3 cursor-pointer group" 
       onClick={onClick}
     >
       <div className="flex justify-between items-start gap-3">
@@ -82,7 +82,7 @@ export default function Tasks() {
   };
 
   return (
-    <div className="page pb-24 h-full flex flex-col bg-bg">
+    <div className="page pb-24 h-full flex flex-col">
       <header className="page-header flex justify-between items-center mb-6 pt-2">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -116,15 +116,15 @@ export default function Tasks() {
 
       {/* View Toggles & Add button */}
       <div className="flex justify-between items-center mb-6">
-        <div className="flex bg-white rounded-lg p-1 border border-border shadow-sm">
-          <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors ${view === 'list' ? 'bg-bg text-text' : 'text-muted'}`} onClick={() => setView('list')}>
+        <div className="flex bg-[var(--color-surface)] rounded-lg p-1 border border-border shadow-sm">
+          <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors ${view === 'list' ? 'bg-[var(--color-bg)] text-[var(--color-text)]' : 'text-[var(--color-text-3)]'}`} onClick={() => setView('list')}>
             <List size={14} /> List
           </button>
-          <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors ${view === 'board' ? 'bg-bg text-text' : 'text-muted'}`} onClick={() => setView('board')}>
+          <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors ${view === 'board' ? 'bg-[var(--color-bg)] text-[var(--color-text)]' : 'text-[var(--color-text-3)]'}`} onClick={() => setView('board')}>
             <LayoutGrid size={14} /> Board
           </button>
         </div>
-        <button className="bg-[var(--color-text)] text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-md hover:opacity-90" onClick={() => setEditingTask(null)}>
+        <button className="btn btn-primary text-sm h-10" onClick={() => setEditingTask(null)}>
           <Plus size={16} /> Add Task
         </button>
       </div>

@@ -414,11 +414,12 @@ export function useLinks(params = {}) {
 }
 
 
+
 export function useCalendarEvents() {
   const query = useQuery({
     queryKey: ['calendarEvents'],
     queryFn: async () => {
-      const [debts, subs, trips, tasks, contacts] = await Promise.all([
+      const results = await Promise.allSettled([
         apiClient.get('/debts'),
         apiClient.get('/subscriptions'),
         apiClient.get('/trips'),
@@ -426,85 +427,109 @@ export function useCalendarEvents() {
         apiClient.get('/people')
       ]);
 
+      const [debtsRes, subsRes, tripsRes, tasksRes, contactsRes] = results;
+
       const events = [];
 
       // Add tasks
-      (tasks?.data || []).forEach(t => {
-        if (t.due_date) {
-          events.push({
-            id: `task-${t.id}`,
-            type: 'task',
-            title: t.title,
-            date: t.due_date,
-            status: t.status,
-            originalId: t.id
-          });
-        }
-      });
+      if (tasksRes.status === 'fulfilled') {
+        (tasksRes.value?.data || []).forEach(t => {
+          if (t.due_date) {
+            events.push({
+              id: `task-${t.id}`,
+              type: 'task',
+              title: t.title,
+              date: t.due_date,
+              status: t.status,
+              originalId: t.id
+            });
+          }
+        });
+      }
 
       // Add trips
-      (trips?.data || []).forEach(t => {
-        if (t.start_date) {
-          events.push({
-            id: `trip-${t.id}-start`,
-            type: 'trip',
-            title: `Trip: ${t.name}`,
-            date: t.start_date,
-            originalId: t.id
-          });
-        }
-      });
-
-      // Add subscriptions (these usually repeat, for now we just show next billing date if present)
-      (subs?.data || []).forEach(s => {
-        if (s.next_billing_date) {
-          events.push({
-            id: `sub-${s.id}`,
-            type: 'subscription',
-            title: s.name,
-            date: s.next_billing_date,
-            amount: s.amount,
-            originalId: s.id
-          });
-        }
-      });
-
-      // Add debts due dates
-      (debts?.data || []).forEach(d => {
-        if (d.due_date) {
-          events.push({
-            id: `debt-${d.id}`,
-            type: 'debt',
-            title: d.name,
-            date: d.due_date,
-            amount: d.amount,
-            originalId: d.id
-          });
-        }
-      });
-
-      // Add birthdays — project to the NEXT upcoming occurrence regardless of birth year
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      (contacts?.data || []).forEach(c => {
-        if (c.birthday) {
-          const bday = new Date(c.birthday);
-          // Build this year's occurrence
-          let nextBday = new Date(today.getFullYear(), bday.getUTCMonth(), bday.getUTCDate());
-          // If it has already passed this year, push to next year
-          if (nextBday < today) {
-            nextBday = new Date(today.getFullYear() + 1, bday.getUTCMonth(), bday.getUTCDate());
+      if (tripsRes.status === 'fulfilled') {
+        (tripsRes.value?.data || []).forEach(t => {
+          if (t.start_date) {
+            events.push({
+              id: `trip-${t.id}-start`,
+              type: 'trip',
+              title: `Trip: ${t.name}`,
+              date: t.start_date,
+              originalId: t.id
+            });
           }
-          const age = nextBday.getFullYear() - bday.getUTCFullYear();
-          events.push({
-            id: `birthday-${c.id}`,
-            type: 'birthday',
-            title: `🎂 ${c.name}'s Birthday (turns ${age})`,
-            date: nextBday.toISOString().split('T')[0],
-            originalId: c.id
-          });
-        }
-      });
+        });
+      }
+
+      // Add subscriptions (using next_date)
+      if (subsRes.status === 'fulfilled') {
+        (subsRes.value?.data || []).forEach(s => {
+          if (s.next_date) {
+            events.push({
+              id: `sub-${s.id}`,
+              type: 'subscription',
+              title: s.name,
+              date: s.next_date,
+              amount: s.amount,
+              originalId: s.id
+            });
+          }
+        });
+      }
+
+      // Add debts (using debt_date and remaining_balance)
+      if (debtsRes.status === 'fulfilled') {
+        (debtsRes.value?.data || []).forEach(d => {
+          if (d.debt_date) {
+            events.push({
+              id: `debt-${d.id}`,
+              type: 'debt',
+              title: d.name,
+              date: d.debt_date,
+              amount: d.remaining_balance || d.principal,
+              originalId: d.id
+            });
+          }
+        });
+      }
+
+      // Add birthdays
+      if (contactsRes.status === 'fulfilled') {
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        
+        (contactsRes.value?.data || []).forEach(c => {
+          if (c.birthday) {
+            // Fix birthday math: construct local date string directly
+            const [y, m, d] = c.birthday.split('T')[0].split('-');
+            const bdayMonth = parseInt(m, 10);
+            const bdayDate = parseInt(d, 10);
+            
+            // Generate date string for this year
+            let projectedYear = currentYear;
+            const thisYearDate = new Date(currentYear, bdayMonth - 1, bdayDate);
+            
+            // If birthday has passed this year, project to next year
+            if (thisYearDate < today && !(thisYearDate.getMonth() === today.getMonth() && thisYearDate.getDate() === today.getDate())) {
+               projectedYear = currentYear + 1;
+            }
+            
+            // Pad month and day
+            const paddedMonth = String(bdayMonth).padStart(2, '0');
+            const paddedDay = String(bdayDate).padStart(2, '0');
+            const projectedDateStr = `${projectedYear}-${paddedMonth}-${paddedDay}`;
+
+            events.push({
+              id: `bday-${c.id}`,
+              type: 'birthday',
+              title: `Birthday: ${c.name}`,
+              date: projectedDateStr,
+              originalId: c.id
+            });
+          }
+        });
+      }
 
       // Sort chronological
       events.sort((a, b) => new Date(a.date) - new Date(b.date));
