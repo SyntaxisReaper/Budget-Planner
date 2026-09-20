@@ -55,16 +55,22 @@ export default function Calendar() {
     return eachDayOfInterval({ start: startDate, end: endDate });
   }, [currentMonth]);
 
+  const parseLocalDate = (dateStr) => {
+    if (!dateStr) return new Date();
+    const [y, m, d] = dateStr.split('T')[0].split('-');
+    return new Date(y, m - 1, d);
+  };
+
   // Events on the selected date
   const selectedEvents = useMemo(() => {
-    return events.filter(e => isSameDay(new Date(e.date), selectedDate));
+    return events.filter(e => isSameDay(parseLocalDate(e.date), selectedDate));
   }, [events, selectedDate]);
 
   // Events map for the badges
   const eventsByDate = useMemo(() => {
     const map = {};
     events.forEach(e => {
-      const dateStr = format(new Date(e.date), 'yyyy-MM-dd');
+      const dateStr = format(parseLocalDate(e.date), 'yyyy-MM-dd');
       if (!map[dateStr]) map[dateStr] = [];
       map[dateStr].push(e);
     });
