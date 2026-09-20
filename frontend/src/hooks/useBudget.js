@@ -329,12 +329,12 @@ export function useContacts() {
   });
 
   const update = useMutation({
-    mutationFn: ({ id, ...data }) => apiClient.put(/people/, data),
+    mutationFn: ({ id, ...data }) => apiClient.put(`/people/${id}`, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contacts'] }),
   });
 
   const remove = useMutation({
-    mutationFn: (id) => apiClient.delete(/people/),
+    mutationFn: (id) => apiClient.delete(`/people/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contacts'] }),
   });
 

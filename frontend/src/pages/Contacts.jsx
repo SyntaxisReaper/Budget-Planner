@@ -13,7 +13,6 @@ function ContactModal({ contact, onClose, onSave }) {
     email: contact?.email || '', 
     phone: contact?.phone || '',
     birthday: contact?.birthday || '',
-    anniversary: contact?.anniversary || ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -52,18 +51,11 @@ function ContactModal({ contact, onClose, onSave }) {
                 value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
             </div>
           </div>
-          <div className="form-row">
-            <div className="form-group">
+          <div className="form-group">
               <label className="label">Birthday (Optional)</label>
               <input type="date" className="input"
                 value={form.birthday} onChange={e => setForm({ ...form, birthday: e.target.value })} />
             </div>
-            <div className="form-group">
-              <label className="label">Anniversary (Optional)</label>
-              <input type="date" className="input"
-                value={form.anniversary} onChange={e => setForm({ ...form, anniversary: e.target.value })} />
-            </div>
-          </div>
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn btn-primary" disabled={loading}>
