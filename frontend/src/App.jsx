@@ -218,6 +218,8 @@ function NotificationManager() {
       if (Capacitor.isNativePlatform()) {
         const total = accounts.reduce((sum, acc) => sum + Number(acc.current_balance), 0);
         Preferences.set({ key: 'total_balance', value: total.toString() });
+        const accountsData = accounts.map(a => ({ id: a.id, name: a.name, balance: a.current_balance }));
+        Preferences.set({ key: 'accounts_data', value: JSON.stringify(accountsData) });
       }
 
       const thresholdStr = localStorage.getItem('low_balance_threshold');
