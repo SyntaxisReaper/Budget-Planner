@@ -28,7 +28,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const allowedOrigins = [FRONTEND_URL, 'http://localhost', 'capacitor://localhost'];
+const allowedOrigins = [FRONTEND_URL, 'http://localhost', 'capacitor://localhost', 'http://tauri.localhost', 'https://tauri.localhost'];
 app.use(cors({ 
   origin: function(origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
