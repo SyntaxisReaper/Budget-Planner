@@ -76,3 +76,4 @@ app.use((err, _req, res, _next) => {
 app.listen(PORT, () => {
   console.log(`🚀 Budget API running on http://localhost:${PORT}`);
 });
+
