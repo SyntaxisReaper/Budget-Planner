@@ -126,6 +126,24 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Insufficient funds in account for this transaction' });
     }
   }
+  // ── Duplicate UTR guard ────────────────────────────────────────────────────
+  // Scanning the same receipt twice must never silently double-count.
+  // Returns 409 Conflict so the frontend can show a specific warning.
+  if (utr_id) {
+    const { data: existing } = await supabase
+      .from('transactions')
+      .select('id, occurred_at, amount')
+      .eq('user_id', req.userId)
+      .eq('utr_id', utr_id)
+      .maybeSingle();
+    if (existing) {
+      return res.status(409).json({
+        error: 'duplicate_utr',
+        message: `A transaction with UTR ${utr_id} is already logged (₹${existing.amount} on ${new Date(existing.occurred_at).toLocaleDateString('en-IN')}).`,
+        existing_id: existing.id,
+      });
+    }
+  }
 
   // Verify Item Ownership
   if (item_id) {

@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TableVirtuoso } from 'react-virtuoso';
-import { Plus, Filter, ArrowRightLeft, Banknote, Pencil } from 'lucide-react';
+import { Plus, Filter, ArrowRightLeft, Banknote, Pencil, ScanLine, Loader2 } from 'lucide-react';
 import { useTransactions, useItems, useAccounts, useDebts, useGoals, useSettings, useCategorizationTrainingData } from '../hooks/useBudget.js';
 import { trainCategorizer, predictCategory } from '../lib/categorization.js';
 import { computeCycleBounds } from '../lib/dateUtils.js';
@@ -14,6 +14,7 @@ import EmptyState from '../components/EmptyState.jsx';
 import { useQueryClient } from '@tanstack/react-query';
 import { useUndoableAction } from '../hooks/useUndo.jsx';
 import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants , tapFeedback } from '../lib/motion.js';
+import apiClient from '../lib/apiClient.js';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
@@ -22,7 +23,7 @@ function toLocalDatetimeString(date) {
   return new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
 }
 
-function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose, onCreate, onUpdate, onTransfer, initialData, editMode }) {
+function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose, onCreate, onUpdate, onTransfer, initialData, editMode, scanMeta }) {
   const [form, setForm] = useState({
     account_id: initialData?.account_id || (accounts.length > 0 ? accounts[0].id : ''),
     type: initialData?.type || 'expense',
@@ -35,6 +36,9 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
     utr_id: initialData?.utr_id || '',
     note: initialData?.note || ''
   });
+
+  // Fields locked when pre-filled from a scan (amount, utr_id, occurred_at)
+  const scanLocked = !!scanMeta;
 
   // Multi-item state
   const [multiItems, setMultiItems] = useState(() => {
@@ -151,7 +155,12 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
       toast.success(editMode ? 'Transaction updated!' : (form.type === 'transfer_out' ? 'Transfer completed!' : 'Transaction logged!'));
       onClose();
     } catch (err) {
-      toast.error(err.message);
+      // Handle duplicate UTR specifically
+      if (err.message?.includes('duplicate_utr') || err.message?.includes('UTR')) {
+        toast.error(`⚠️ Already logged: ${err.message}`, { duration: 6000 });
+      } else {
+        toast.error(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -173,7 +182,40 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
         dragConstraints={{ top: 0, bottom: 0 }}
         onDragEnd={(e, info) => { if (info.offset.y > 100) onClose(); }}
       >
-        <h2 className="modal-title">{editMode ? '✏️ Edit Transaction' : '➕ Log Transaction'}</h2>
+        <h2 className="modal-title">{editMode ? '✏️ Edit Transaction' : (scanMeta ? '📷 Confirm Scanned Receipt' : '➕ Log Transaction')}</h2>
+
+        {/* Scan engine badge */}
+        {scanMeta && (
+          <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '3px 10px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600,
+              background: scanMeta.engine === 'gemini' || scanMeta.engine === 'gemini+ocr'
+                ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.15)',
+              color: scanMeta.engine === 'gemini' || scanMeta.engine === 'gemini+ocr'
+                ? '#60a5fa' : '#34d399',
+            }}>
+              {scanMeta.engine === 'gemini' || scanMeta.engine === 'gemini+ocr' ? '✦ Scanned via Gemini AI' : '⚙ Scanned via OCR'}
+            </span>
+            {scanMeta.app_source && scanMeta.app_source !== 'unknown' && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-3)', textTransform: 'capitalize' }}>
+                {scanMeta.app_source}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Low confidence warning */}
+        {scanMeta?.low_confidence && (
+          <div style={{
+            background: 'rgba(234,179,8,0.12)', border: '1px solid rgba(234,179,8,0.3)',
+            borderRadius: 'var(--radius)', padding: '8px 12px', marginBottom: 12,
+            fontSize: '0.8rem', color: '#fbbf24',
+          }}>
+            ⚠️ Some fields may need checking — Gemini wasn't fully confident in this scan.
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="form-group">
             <label className="label">Account</label>
@@ -200,7 +242,15 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
             </div>
             <div className="form-group">
             <label className="label">Amount (₹)</label>
-            <CurrencyInput className="input text-xl font-bold" placeholder="0.00" value={form.amount} onChange={(v) => set('amount', v)} required />
+            <CurrencyInput
+              className="input text-xl font-bold"
+              placeholder="0.00"
+              value={form.amount}
+              onChange={(v) => set('amount', v)}
+              required
+              readOnly={scanLocked && !!form.amount}
+              style={scanLocked && form.amount ? { background: 'var(--color-surface-2)', color: 'var(--color-text-2)', cursor: 'not-allowed' } : {}}
+            />
           </div>
           </div>
 
@@ -317,11 +367,27 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
           <div className="form-row">
             <div className="form-group">
               <label className="label">Date & Time</label>
-              <input type="datetime-local" className="input" required value={form.occurred_at} onChange={(e) => set('occurred_at', e.target.value)} />
+              <input
+                type="datetime-local"
+                className="input"
+                required
+                value={form.occurred_at}
+                onChange={(e) => set('occurred_at', e.target.value)}
+                readOnly={scanLocked && !!initialData?.occurred_at}
+                style={scanLocked && initialData?.occurred_at ? { background: 'var(--color-surface-2)', color: 'var(--color-text-2)', cursor: 'not-allowed' } : {}}
+              />
             </div>
             <div className="form-group">
-              <label className="label">UTR / Ref (optional)</label>
-              <input type="text" className="input" placeholder="e.g. UPI Ref" value={form.utr_id} onChange={(e) => handleTextChange('utr_id', e.target.value)} />
+              <label className="label">UTR / Ref {scanLocked && form.utr_id && <span style={{ fontSize: '0.7rem', color: 'var(--color-success)', marginLeft: 4 }}>✓ verified</span>}</label>
+              <input
+                type="text"
+                className="input"
+                placeholder="e.g. UPI Ref"
+                value={form.utr_id}
+                onChange={(e) => handleTextChange('utr_id', e.target.value)}
+                readOnly={scanLocked && !!form.utr_id}
+                style={scanLocked && form.utr_id ? { background: 'var(--color-surface-2)', fontFamily: 'monospace', cursor: 'not-allowed' } : {}}
+              />
             </div>
           </div>
 
@@ -349,6 +415,10 @@ export default function Transactions() {
   const [searchParams] = useSearchParams();
   const [showModal, setShowModal] = useState(searchParams.get('add') === 'true');
   const [editingTransaction, setEditingTransaction] = useState(null);
+  const [scanData, setScanData] = useState(null);     // pre-filled data from receipt scan
+  const [scanMeta, setScanMeta] = useState(null);     // engine/confidence metadata
+  const [scanning, setScanning] = useState(false);    // scanning in-progress spinner
+  const scanFileInputRef = useRef(null);              // hidden <input type="file">
   const [typeFilter, setTypeFilter] = useState('all');
   const [accountFilter, setAccountFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -408,10 +478,45 @@ export default function Transactions() {
   async function handleDelete(id) {
     executeUndoable(id, ['transactions', cycleStart, cycleEnd], async (tid) => {
       await remove.mutateAsync(tid);
-      // Let backend catch up
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
     }, 'Transaction deleted');
+  }
+
+  // ── Scan Receipt ──────────────────────────────────────────────────────────
+  async function handleScanFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = ''; // reset so same file can be re-selected
+
+    setScanning(true);
+    try {
+      const form = new FormData();
+      form.append('receipt', file, file.name);
+      const result = await apiClient.post('/receipts/scan', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      // Build initialData for the modal
+      setScanData({
+        type: 'expense',
+        amount:      result.amount      ?? '',
+        occurred_at: result.occurred_at ?? new Date().toISOString(),
+        utr_id:      result.utr_id      ?? '',
+        note:        result.note        ?? '',
+      });
+      setScanMeta({
+        engine:       result.engine,
+        app_source:   result.app_source,
+        low_confidence: result.low_confidence,
+      });
+      setShowModal(true);
+      toast.success(`Receipt scanned via ${result.engine === 'gemini' || result.engine === 'gemini+ocr' ? 'Gemini AI' : 'OCR'}!`);
+    } catch (err) {
+      toast.error(`Scan failed: ${err.message}. Try a clearer screenshot or fill in manually.`, { duration: 5000 });
+    } finally {
+      setScanning(false);
+    }
   }
 
   function renderTarget(t) {
@@ -443,9 +548,33 @@ export default function Transactions() {
               : 'The unified ledger for all balances'}
           </p>
         </div>
-        <motion.button className="btn btn-primary" onClick={() => setShowModal(true)} whileHover={{ scale: 1.04 }} whileTap={tapFeedback} onTapStart={impactLight}>
-          <Plus size={16} /> Log Transaction
-        </motion.button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Hidden file input for receipt scanning */}
+          <input
+            ref={scanFileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleScanFile}
+            id="receipt-scan-input"
+          />
+          <motion.button
+            className="btn btn-ghost"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            onClick={() => scanFileInputRef.current?.click()}
+            disabled={scanning}
+            whileHover={{ scale: 1.04 }} whileTap={tapFeedback}
+            title="Scan a UPI receipt screenshot"
+          >
+            {scanning
+              ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
+              : <ScanLine size={15} />}
+            {scanning ? 'Scanning…' : 'Scan Receipt'}
+          </motion.button>
+          <motion.button className="btn btn-primary" onClick={() => { setScanData(null); setScanMeta(null); setShowModal(true); }} whileHover={{ scale: 1.04 }} whileTap={tapFeedback} onTapStart={impactLight}>
+            <Plus size={16} /> Log Transaction
+          </motion.button>
+        </div>
       </motion.div>
 
       {/* Summary row */}
@@ -577,18 +706,19 @@ export default function Transactions() {
 
       <AnimatePresence>
         {(showModal || editingTransaction) && (
-          <AddTransactionModal 
-            items={items} 
+          <AddTransactionModal
+            items={items}
             accounts={accounts}
             debts={debts}
             goals={goals}
             wordFreq={wordFreq}
-            onClose={() => { setShowModal(false); setEditingTransaction(null); }} 
-            onCreate={create.mutateAsync} 
+            onClose={() => { setShowModal(false); setEditingTransaction(null); setScanData(null); setScanMeta(null); }}
+            onCreate={create.mutateAsync}
             onUpdate={update.mutateAsync}
             onTransfer={transfer.mutateAsync}
-            initialData={editingTransaction}
+            initialData={editingTransaction ?? scanData}
             editMode={!!editingTransaction}
+            scanMeta={editingTransaction ? null : scanMeta}
           />
         )}
       </AnimatePresence>

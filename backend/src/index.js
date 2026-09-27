@@ -23,6 +23,7 @@ import tripsRoutes from './routes/trips.js';
 import projectsRouter from './routes/projects.js';
 import taskCommentsRouter from './routes/task_comments.js';
 import assistantRoutes from './routes/assistant.js';
+import receiptsRoutes from './routes/receipts.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -73,6 +74,7 @@ app.use('/api/trips', tripsRoutes);
 app.use('/api/projects', projectsRouter);
 app.use('/api/task_comments', taskCommentsRouter);
 app.use('/api/assistant', assistantRoutes);
+app.use('/api/receipts', receiptsRoutes);
 
 // Global error handler
 app.use((err, _req, res, _next) => {
