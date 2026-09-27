@@ -1,7 +1,7 @@
-import { parse as parseVcf } from 'vcf';
+import vCard from 'vcf';
 
 export function parseVCF(fileText) {
-  const cards = parseVcf(fileText);
+  const cards = vCard.parse(fileText);
   // vcf library returns either an array of jCard objects or a single one
   const cardArray = Array.isArray(cards) ? cards : [cards];
   
