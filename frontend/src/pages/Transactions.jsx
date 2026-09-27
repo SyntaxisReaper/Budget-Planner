@@ -15,6 +15,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useUndoableAction } from '../hooks/useUndo.jsx';
 import { staggerContainer, itemVariants, fadeUp, backdropVariants, modalVariants , tapFeedback } from '../lib/motion.js';
 import apiClient from '../lib/apiClient.js';
+import { Capacitor } from '@capacitor/core';
+import { Camera, CameraSource, CameraResultType } from '@capacitor/camera';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
@@ -484,11 +486,7 @@ export default function Transactions() {
   }
 
   // ── Scan Receipt ──────────────────────────────────────────────────────────
-  async function handleScanFile(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = ''; // reset so same file can be re-selected
-
+  async function uploadAndScan(file) {
     setScanning(true);
     try {
       const form = new FormData();
@@ -516,6 +514,39 @@ export default function Transactions() {
       toast.error(`Scan failed: ${err.message}. Try a clearer screenshot or fill in manually.`, { duration: 5000 });
     } finally {
       setScanning(false);
+    }
+  }
+
+  async function handleScanFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = ''; // reset so same file can be re-selected
+    await uploadAndScan(file);
+  }
+
+  async function handleNativeScan() {
+    try {
+      const photo = await Camera.getPhoto({
+        source: CameraSource.Photos,
+        resultType: CameraResultType.Uri,
+      });
+      if (!photo.webPath) return;
+      const response = await fetch(photo.webPath);
+      const blob = await response.blob();
+      const file = new File([blob], `receipt.${photo.format}`, { type: `image/${photo.format}` });
+      await uploadAndScan(file);
+    } catch (err) {
+      if (err.message && !err.message.includes('User cancelled')) {
+        toast.error(`Camera error: ${err.message}`);
+      }
+    }
+  }
+
+  function handleScanClick() {
+    if (Capacitor.isNativePlatform()) {
+      handleNativeScan();
+    } else {
+      scanFileInputRef.current?.click();
     }
   }
 
@@ -561,7 +592,7 @@ export default function Transactions() {
           <motion.button
             className="btn btn-ghost"
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-            onClick={() => scanFileInputRef.current?.click()}
+            onClick={handleScanClick}
             disabled={scanning}
             whileHover={{ scale: 1.04 }} whileTap={tapFeedback}
             title="Scan a UPI receipt screenshot"
