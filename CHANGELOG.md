@@ -6,7 +6,8 @@
 - **Bulk Contact Import:** Added robust `.vcf` and `.csv` parsing to allow users to bulk-import contacts directly from their phone/address book via a sleek modal.
 - **Unified Debts Ledger:** Merged the isolated "People Ledger" directly into the "Debts & Rent" backend table. The Debts page now handles both formal loans and informal IOUs, differentiated seamlessly via a `direction` flag (lent vs borrowed) and a one-click tab filter.
 - **Smart Debt-Matching:** Type a contact's name into the Transaction Note field and the app instantly surfaces matching active debts, offering a 1-tap shortcut to automatically link the transaction to the debt balance.
-- **Consistent Undo Architecture:** Ripped out invasive browser `window.confirm()` popups across the entire app (Goals, Items, Subscriptions, Accounts, Notes, Trip Details) and replaced them with non-blocking, snackbar-based Undo Actions.
+- **Consistent Undo Architecture:** Ripped out invasive browser `window.confirm()` popups across the entire app (Goals, Items, Subscriptions, Accounts, Notes, Trip Details, Contacts) and replaced them with non-blocking, snackbar-based Undo Actions.
+- **Contact Management:** Added the ability to completely delete contacts straight from their profile cards using the new Undo Architecture.
 
 ## Version 5.2.0 - Widgets, Connections & Calendar Grid
 *Previous Version: v5.2.0*
