@@ -37,7 +37,7 @@ const Settings = lazy(() => import('./pages/Settings.jsx'));
 const Subscriptions = lazy(() => import('./pages/Subscriptions.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
 const Notifications = lazy(() => import('./pages/Notifications.jsx'));
-const PeopleLedger = lazy(() => import('./pages/PeopleLedger.jsx'));
+
 const Tasks = lazy(() => import('./pages/Tasks.jsx'));
 const Notes = lazy(() => import('./pages/Notes.jsx'));
 const Calendar = lazy(() => import('./pages/Calendar.jsx'));
@@ -113,7 +113,7 @@ function AnimatedRoutes() {
         <Route path="/settings"     element={<PageWrapper><Settings /></PageWrapper>} />
         <Route path="/subscriptions" element={<PageWrapper><Subscriptions /></PageWrapper>} />
         <Route path="/contacts"     element={<PageWrapper><Contacts /></PageWrapper>} />
-        <Route path="/people-ledger" element={<PageWrapper><PeopleLedger /></PageWrapper>} />
+
         <Route path="/tasks"        element={<PageWrapper><Tasks /></PageWrapper>} />
         <Route path="/notes"        element={<PageWrapper><Notes /></PageWrapper>} />
         <Route path="/calendar"     element={<PageWrapper><Calendar /></PageWrapper>} />

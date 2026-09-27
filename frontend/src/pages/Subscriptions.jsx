@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useUndoableAction } from "../hooks/useUndo.jsx";
 import { Plus, Repeat, CreditCard, Pencil, Trash } from 'lucide-react';
 import { useSubscriptions, useAccounts } from '../hooks/useBudget.js';
 import toast, { impactLight } from '../lib/haptics.js';
@@ -129,6 +130,7 @@ function SubscriptionModal({ sub, accounts, onClose, onSave }) {
 }
 
 export default function Subscriptions() {
+  const { executeUndoable } = useUndoableAction();
   const { query, create, update, remove, processAll } = useSubscriptions();
   const { query: accountsQuery } = useAccounts();
   
@@ -150,9 +152,9 @@ export default function Subscriptions() {
   }, 0);
 
   async function handleDelete(id) {
-    if (!confirm('Stop tracking this subscription? This will not delete past transactions.')) return;
-    try { await remove.mutateAsync(id); toast.success('Deleted'); }
-    catch (err) { toast.error(err.message); }
+    executeUndoable(id, ['subscriptions'], async (tid) => {
+      await remove.mutateAsync(tid);
+    }, 'Subscription stopped');
   }
 
   async function handleForceProcess() {

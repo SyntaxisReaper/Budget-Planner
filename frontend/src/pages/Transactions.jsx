@@ -65,6 +65,25 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  const [debtMatches, setDebtMatches] = useState([]);
+
+  useEffect(() => {
+    if (initialData?.note && initialData?.type === 'expense') {
+      checkDebtMatch(initialData.note);
+    }
+  }, []);
+
+  async function checkDebtMatch(text) {
+    if (text.length >= 3) {
+      try {
+        const { data } = await apiClient.get(`/debts/match?name=${encodeURIComponent(text)}`);
+        setDebtMatches(data.matches || []);
+      } catch (err) { console.error(err); }
+    } else {
+      setDebtMatches([]);
+    }
+  }
+
   const handleTextChange = (field, value) => {
     setForm((p) => {
       const next = { ...p, [field]: value };
@@ -79,6 +98,10 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
       }
       return next;
     });
+
+    if (field === 'note') {
+      checkDebtMatch(value);
+    }
   };
 
   function toggleItemInMulti(itemId) {
@@ -408,6 +431,27 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
             <label className="label">Note</label>
             <input type="text" className="input" placeholder="Optional note…" value={form.note} onChange={(e) => handleTextChange('note', e.target.value)} />
           </div>
+
+          {debtMatches.length > 0 && form.type === 'expense' && (
+            <div style={{
+              background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)',
+              borderRadius: 'var(--radius)', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px'
+            }}>
+              <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: '#818cf8' }}>💳 Is this a payment toward a debt?</p>
+              {debtMatches.map(d => (
+                <button key={d.id} type="button" className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    setForm(f => ({ ...f, debt_id: d.id, type: 'debt_payment' }));
+                    setDebtMatches([]);
+                  }}>
+                  Link to: {d.people?.name || d.name} — ₹{d.remaining_balance} remaining
+                </button>
+              ))}
+              <button type="button" className="btn btn-ghost btn-sm text-muted" onClick={() => setDebtMatches([])}>
+                Not a debt payment
+              </button>
+            </div>
+          )}
 
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>

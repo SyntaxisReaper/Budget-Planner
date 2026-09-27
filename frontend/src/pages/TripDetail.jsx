@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useUndoableAction } from "../hooks/useUndo.jsx";
 import { useParams, useNavigate } from 'react-router-dom';
 import { Plane, Users, Plus, ArrowLeft, ArrowRightLeft, CheckCircle2, Trash2, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
@@ -9,6 +10,7 @@ import { formatCurrency } from '../lib/utils.js';
 import toast from '../lib/haptics.js';
 
 export default function TripDetail() {
+  const { executeUndoable } = useUndoableAction();
   const { id } = useParams();
   const navigate = useNavigate();
   const { query: tripQuery, completeMutation } = useTrip(id);
@@ -43,25 +45,16 @@ export default function TripDetail() {
   const progressPct = budget > 0 ? Math.min((totalCost / budget) * 100, 100) : 0;
 
   const handleComplete = async () => {
-    if (window.confirm('Are you sure you want to complete this trip? This will lock in the settlement.')) {
-      try {
-        await completeMutation.mutateAsync();
-        toast.success('Trip completed!');
-      } catch (e) {
-        toast.error('Failed to complete trip');
-      }
-    }
+    executeUndoable(id, ['trips', 'trip', id], async () => {
+      await completeMutation.mutateAsync();
+      toast.success('Trip completed!');
+    }, 'Trip completed');
   };
 
   const handleDeleteTx = async (txId) => {
-    if (window.confirm('Delete this transaction?')) {
-      try {
-        await deleteMutation.mutateAsync(txId);
-        toast.success('Deleted');
-      } catch (e) {
-        toast.error('Failed to delete');
-      }
-    }
+    executeUndoable(txId, ['trip-transactions', id], async (tid) => {
+      await deleteMutation.mutateAsync(tid);
+    }, 'Transaction deleted');
   };
 
   return (

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useUndoableAction } from "../hooks/useUndo.jsx";
 import { Target, Search, MoreVertical, Plus } from 'lucide-react';
 import { useGoals } from '../hooks/useBudget.js';
 import GoalProgressCard from '../components/GoalProgressCard.jsx';
@@ -74,6 +75,7 @@ function GoalModal({ initial, onClose, onSave }) {
 }
 
 export default function Goals() {
+  const { executeUndoable } = useUndoableAction();
   const { query, create, update, remove } = useGoals();
   const [modal, setModal] = useState(null);
   const [parent] = useAutoAnimate();
@@ -84,9 +86,9 @@ export default function Goals() {
   const atRisk = goals.filter((g) => g.at_risk).length;
 
   async function handleDelete(id) {
-    if (!confirm('Delete this goal?')) return;
-    try { await remove.mutateAsync(id); toast.success('Goal deleted'); }
-    catch (err) { toast.error(err.message); }
+    executeUndoable(id, ['goals'], async (tid) => {
+      await remove.mutateAsync(tid);
+    }, 'Goal deleted');
   }
 
   async function handleSave(form) {

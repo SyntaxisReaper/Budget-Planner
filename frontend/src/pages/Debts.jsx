@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Plus, DollarSign, Banknote, Pencil, Trash, CreditCard, Home } from 'lucide-react';
-import { useDebts, useAccounts, useTransactions } from '../hooks/useBudget.js';
+import { Plus, DollarSign, Banknote, Pencil, Trash, CreditCard, Home, ArrowRight, ArrowLeft } from 'lucide-react';
+import { useDebts, useAccounts, useTransactions, useContacts } from '../hooks/useBudget.js';
 import toast, { impactLight } from '../lib/haptics.js';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,9 +32,9 @@ function MotionModal({ children, onClose }) {
   );
 }
 
-function AddDebtModal({ onClose, onCreate }) {
+function AddDebtModal({ onClose, onCreate, contacts }) {
   const [form, setForm] = useState({ 
-    name: '', principal: '', kind: 'debt', debt_date: new Date().toISOString().split('T')[0], description: '', priority: 'normal' 
+    name: '', principal: '', kind: 'debt', debt_date: new Date().toISOString().split('T')[0], description: '', priority: 'normal', direction: 'borrowed', person_id: '' 
   });
   const [loading, setLoading] = useState(false);
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
@@ -49,9 +49,11 @@ function AddDebtModal({ onClose, onCreate }) {
         kind: form.kind,
         debt_date: form.debt_date,
         description: form.description || null, 
-        priority: form.priority 
+        priority: form.priority,
+        direction: form.direction,
+        person_id: form.person_id || null
       });
-      toast.success(form.kind === 'rent' ? 'Rent added!' : 'Debt added!');
+      toast.success(form.direction === 'lent' ? 'IOU added!' : form.kind === 'rent' ? 'Rent added!' : 'Debt added!');
       onClose();
     } catch (err) { toast.error(err.message); }
     finally { setLoading(false); }
@@ -69,10 +71,27 @@ function AddDebtModal({ onClose, onCreate }) {
         
         <div className="form-row">
           <div className="form-group">
-            <label className="label">Type</label>
+            <label className="label">Category</label>
             <select className="input" value={form.kind} onChange={(e) => set('kind', e.target.value)}>
-              <option value="debt">Debt</option>
+              <option value="debt">General</option>
               <option value="rent">Rent</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="label">Direction</label>
+            <select className="input" value={form.direction} onChange={(e) => set('direction', e.target.value)}>
+              <option value="borrowed">I Owe</option>
+              <option value="lent">Owed to Me</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label className="label">Linked Contact (Optional)</label>
+            <select className="input" value={form.person_id} onChange={(e) => set('person_id', e.target.value)}>
+              <option value="">— None —</option>
+              {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="form-group">
@@ -114,7 +133,7 @@ function AddDebtModal({ onClose, onCreate }) {
   );
 }
 
-function EditDebtModal({ debt, onClose, onUpdate }) {
+function EditDebtModal({ debt, onClose, onUpdate, contacts }) {
   const [form, setForm] = useState({
     name: debt.name,
     kind: debt.kind || 'debt',
@@ -123,6 +142,8 @@ function EditDebtModal({ debt, onClose, onUpdate }) {
     min_payment: debt.min_payment ?? '',
     description: debt.description ?? '',
     priority: debt.priority || 'normal',
+    direction: debt.direction || 'borrowed',
+    person_id: debt.person_id || '',
   });
   const [loading, setLoading] = useState(false);
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
@@ -138,6 +159,8 @@ function EditDebtModal({ debt, onClose, onUpdate }) {
         debt_date: form.debt_date,
         description: form.description || null,
         priority: form.priority,
+        direction: form.direction,
+        person_id: form.person_id || null,
       });
       toast.success('Updated successfully!');
       onClose();
@@ -157,10 +180,27 @@ function EditDebtModal({ debt, onClose, onUpdate }) {
         
         <div className="form-row">
           <div className="form-group">
-            <label className="label">Type</label>
+            <label className="label">Category</label>
             <select className="input" value={form.kind} onChange={(e) => set('kind', e.target.value)}>
-              <option value="debt">Debt</option>
+              <option value="debt">General</option>
               <option value="rent">Rent</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="label">Direction</label>
+            <select className="input" value={form.direction} onChange={(e) => set('direction', e.target.value)}>
+              <option value="borrowed">I Owe</option>
+              <option value="lent">Owed to Me</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label className="label">Linked Contact (Optional)</label>
+            <select className="input" value={form.person_id} onChange={(e) => set('person_id', e.target.value)}>
+              <option value="">— None —</option>
+              {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="form-group">
@@ -282,6 +322,7 @@ export default function Debts() {
   const { executeUndoable } = useUndoableAction();
   const { query, create, update, remove } = useDebts();
   const { query: accountsQuery } = useAccounts();
+  const { query: contactsQuery } = useContacts();
   const { create: createTxn } = useTransactions({});
   
   const [showAdd, setShowAdd] = useState(false);
@@ -289,10 +330,15 @@ export default function Debts() {
   const [editDebt, setEditDebt] = useState(null);
   const [parent] = useAutoAnimate();
 
+  const [filter, setFilter] = useState('all'); // all | borrowed | lent
+
   const debts = query.data || [];
+  const contacts = contactsQuery.data || [];
   const accounts = accountsQuery.data?.filter(a => a.is_active) || [];
-  const active = debts.filter((d) => d.status === 'active');
-  const paidOff = debts.filter((d) => d.status === 'paid_off');
+  
+  const filteredDebts = debts.filter(d => filter === 'all' || d.direction === filter);
+  const active = filteredDebts.filter((d) => d.status === 'active');
+  const paidOff = filteredDebts.filter((d) => d.status === 'paid_off');
   const totalRemaining = active.reduce((s, d) => s + Number(d.remaining_balance), 0);
 
   async function handleDelete(id) {
@@ -306,17 +352,33 @@ export default function Debts() {
     <div className="page">
       <motion.div className="page-header flex items-center justify-between" variants={fadeUp} initial="hidden" animate="visible">
         <div>
-          <h1 className="page-title">Debts & Rent</h1>
-          <p className="page-subtitle">Track and pay down your liabilities</p>
+          <h1 className="page-title">Debts & IOUs</h1>
+          <p className="page-subtitle">Track money you owe, and money owed to you</p>
         </div>
-        <motion.button
-          className="btn btn-primary"
-          onClick={() => setShowAdd(true)}
-          whileHover={{ scale: 1.04 }} whileTap={tapFeedback} onTapStart={impactLight}
-        >
-          <Plus size={16} /> Add New
-        </motion.button>
+        <div className="flex items-center gap-3">
+          <select className="select bg-surface-2 hidden sm:block" value={filter} onChange={(e) => setFilter(e.target.value)}>
+            <option value="all">All</option>
+            <option value="borrowed">I Owe (Borrowings)</option>
+            <option value="lent">Owed to Me (IOUs)</option>
+          </select>
+          <motion.button
+            className="btn btn-primary"
+            onClick={() => setShowAdd(true)}
+            whileHover={{ scale: 1.04 }} whileTap={tapFeedback} onTapStart={impactLight}
+          >
+            <Plus size={16} /> Add New
+          </motion.button>
+        </div>
       </motion.div>
+      
+      {/* Mobile Filter */}
+      <div className="sm:hidden mb-4">
+        <select className="select w-full bg-surface-2" value={filter} onChange={(e) => setFilter(e.target.value)}>
+          <option value="all">All Records</option>
+          <option value="borrowed">I Owe (Borrowings)</option>
+          <option value="lent">Owed to Me (IOUs)</option>
+        </select>
+      </div>
 
       {/* Summary */}
       <motion.div className="grid-3 mb-6" variants={staggerContainer} initial="hidden" animate="visible">
@@ -363,6 +425,8 @@ export default function Debts() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-bold break-words whitespace-normal max-w-full leading-tight">{debt.name}</span>
                         {debt.priority === 'high' && <span className="badge badge-negative shrink-0">High</span>}
+                        {debt.direction === 'lent' && <span className="badge badge-primary shrink-0 flex items-center gap-1"><ArrowRight size={10}/> Owed to me</span>}
+                        {debt.direction === 'borrowed' && debt.person_id && <span className="badge badge-negative shrink-0 flex items-center gap-1"><ArrowLeft size={10}/> I Owe</span>}
                       </div>
                       <div className="text-xs text-muted mt-1">
                         {debt.debt_date ? `Incurred: ${new Date(debt.debt_date).toLocaleDateString()}` : ''}
@@ -440,9 +504,9 @@ export default function Debts() {
       </div>
 
       <AnimatePresence>
-        {showAdd && <AddDebtModal onClose={() => setShowAdd(false)} onCreate={create.mutateAsync} />}
+        {showAdd && <AddDebtModal onClose={() => setShowAdd(false)} onCreate={create.mutateAsync} contacts={contacts} />}
         {payDebt && <LogPaymentModal debt={payDebt} accounts={accounts} onClose={() => setPayDebt(null)} onLog={createTxn.mutateAsync} />}
-        {editDebt && <EditDebtModal debt={editDebt} onClose={() => setEditDebt(null)} onUpdate={update.mutateAsync} />}
+        {editDebt && <EditDebtModal debt={editDebt} onClose={() => setEditDebt(null)} onUpdate={update.mutateAsync} contacts={contacts} />}
       </AnimatePresence>
     </div>
   );

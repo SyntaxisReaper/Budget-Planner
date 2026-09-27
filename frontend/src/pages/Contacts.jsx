@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useContacts, usePeopleLedger } from '../hooks/useBudget.js';
+import { useContacts, useDebts } from '../hooks/useBudget.js';
 import { useTrips } from '../hooks/useTrips.js';
 import { Users, Plus, Phone, Mail, ChevronRight, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,6 +7,44 @@ import { staggerContainer, itemVariants, backdropVariants, modalVariants } from 
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../lib/utils.js';
 import ContactHistoryModal from '../components/ContactHistoryModal.jsx';
+import { apiClient } from '../lib/apiClient.js';
+import toast from 'react-hot-toast';
+
+function ImportContactsButton({ onSuccess }) {
+  const [importing, setImporting] = useState(false);
+
+  async function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const form = new FormData();
+      form.append('contacts', file);
+      const { data } = await apiClient.post('/people/import', form, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (data.skipped === data.total && data.total > 0) {
+        toast.success(`Scanned ${data.total} contacts, no new updates found.`);
+      } else {
+        toast.success(`Imported ${data.total} contacts (${data.created} new, ${data.updated} updated)`);
+      }
+      onSuccess(data);
+    } catch (e) {
+      toast.error('Import failed — check the file format');
+    } finally {
+      setImporting(false);
+      // Reset the file input
+      e.target.value = '';
+    }
+  }
+
+  return (
+    <label className="btn btn-secondary cursor-pointer">
+      {importing ? <span className="spinner"></span> : '📱 Import'}
+      <input type="file" accept=".vcf,.csv" className="hidden" onChange={handleFile} />
+    </label>
+  );
+}
 
 function ContactModal({ contact, onClose, onSave, onViewHistory }) {
   const [form, setForm] = useState({ 
@@ -82,7 +120,7 @@ function ContactModal({ contact, onClose, onSave, onViewHistory }) {
 
 export default function Contacts() {
   const { query, create, update, remove } = useContacts();
-  const { query: ledgerQuery } = usePeopleLedger();
+  const { query: debtsQuery } = useDebts();
   const { query: tripsQuery } = useTrips();
   
   const [editingContact, setEditingContact] = useState(undefined);
@@ -90,14 +128,14 @@ export default function Contacts() {
   const navigate = useNavigate();
   
   const contacts = query.data || [];
-  const ledgers = ledgerQuery.data || [];
+  const debts = debtsQuery.data || [];
   const trips = tripsQuery.data || [];
 
   const getContactSummary = (contactId) => {
-    // IOU logic
-    const contactLedgers = ledgers.filter(l => l.person_id === contactId && l.status === 'active');
-    const youOwe = contactLedgers.filter(l => l.direction === 'borrowed').reduce((s, l) => s + Number(l.amount), 0);
-    const owedToYou = contactLedgers.filter(l => l.direction === 'lent').reduce((s, l) => s + Number(l.amount), 0);
+    // Debt/IOU logic
+    const contactDebts = debts.filter(d => d.person_id === contactId && d.status === 'active');
+    const youOwe = contactDebts.filter(d => d.direction === 'borrowed').reduce((s, d) => s + Number(d.remaining_balance), 0);
+    const owedToYou = contactDebts.filter(d => d.direction === 'lent').reduce((s, d) => s + Number(d.remaining_balance), 0);
     const balance = owedToYou - youOwe;
 
     // Trip logic
@@ -113,9 +151,12 @@ export default function Contacts() {
           <h1 className="page-title">Contacts</h1>
           <p className="text-muted text-sm mt-1">People in your network</p>
         </div>
-        <button className="btn btn-primary btn-icon" onClick={() => setEditingContact(null)}>
-          <Plus size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <ImportContactsButton onSuccess={() => query.refetch()} />
+          <button className="btn btn-primary btn-icon" onClick={() => setEditingContact(null)}>
+            <Plus size={20} />
+          </button>
+        </div>
       </header>
 
       <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="flex flex-col gap-3">

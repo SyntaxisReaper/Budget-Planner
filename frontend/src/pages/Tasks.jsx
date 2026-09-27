@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useUndoableAction } from "../hooks/useUndo.jsx";
 import { useTasks, useProjects, useContacts } from '../hooks/useBudget.js';
 import { Plus, CheckSquare, Search, Bell, Paperclip, MessageSquare, Trash2, Calendar as CalendarIcon, User, ChevronDown, List, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,6 +11,7 @@ import TaskCard from '../components/TaskCard.jsx';
 import KanbanBoard from '../components/KanbanBoard.jsx';
 
 export default function Tasks() {
+  const { executeUndoable } = useUndoableAction();
   const { query: tasksQuery, create, update, remove } = useTasks();
   const { query: projectsQuery, create: createProject } = useProjects();
   

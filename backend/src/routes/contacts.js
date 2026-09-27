@@ -1,6 +1,8 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { supabase } from '../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
+import { parseVCF, parseCSV } from '../services/contactsImporter.js';
 
 const router = Router();
 router.use(authenticate);
@@ -15,6 +17,61 @@ router.get('/', async (req, res) => {
 
   if (error) throw error;
   res.json(data);
+});
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+// POST /api/people/import
+router.post('/import', upload.single('contacts'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file provided' });
+
+  const text    = req.file.buffer.toString('utf-8');
+  const mime    = req.file.originalname.toLowerCase();
+  const records = mime.endsWith('.vcf') ? parseVCF(text) : parseCSV(text);
+
+  let created = 0, updated = 0, skipped = 0;
+
+  for (const record of records) {
+    if (!record.name) { skipped++; continue; }
+
+    const { data: existing } = await supabase
+      .from('people')
+      .select('id, phone, email, birthday')
+      .eq('user_id', req.userId)
+      .ilike('name', record.name)
+      .single();
+
+    if (existing) {
+      const patch = {};
+      if (record.phone    && !existing.phone)    patch.phone    = record.phone;
+      if (record.email    && !existing.email)    patch.email    = record.email;
+      if (record.birthday && !existing.birthday) patch.birthday = record.birthday;
+
+      if (Object.keys(patch).length > 0) {
+        await supabase.from('people').update(patch).eq('id', existing.id);
+        updated++;
+      } else {
+        skipped++;
+      }
+    } else {
+      await supabase.from('people').insert({
+        user_id:  req.userId,
+        name:     record.name,
+        phone:    record.phone    || null,
+        email:    record.email    || null,
+        birthday: record.birthday || null,
+      });
+      created++;
+    }
+  }
+
+  await supabase.from('contacts_import_log').insert({
+    user_id: req.userId,
+    total:   records.length,
+    created, updated, skipped,
+  });
+
+  res.json({ total: records.length, created, updated, skipped });
 });
 
 // Create a contact

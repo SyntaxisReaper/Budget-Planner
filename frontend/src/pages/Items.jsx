@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useUndoableAction } from "../hooks/useUndo.jsx";
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useItems } from '../hooks/useBudget.js';
 import toast, { impactLight } from '../lib/haptics.js';
@@ -169,6 +170,7 @@ function CategoryColumn({ title, items, onEdit, onDelete }) {
 }
 
 export default function Items() {
+  const { executeUndoable } = useUndoableAction();
   const { query, create, update, remove } = useItems();
   const [modal, setModal] = useState(null); // null | 'add' | item object
 
@@ -189,13 +191,9 @@ export default function Items() {
   const totalNeeded = items.reduce((s, i) => s + Number(i.amount_needed), 0);
 
   async function handleDelete(id) {
-    if (!confirm('Delete this item?')) return;
-    try {
-      await remove.mutateAsync(id);
-      toast.success('Item deleted');
-    } catch (err) {
-      toast.error(err.message);
-    }
+    executeUndoable(id, ['items'], async (tid) => {
+      await remove.mutateAsync(tid);
+    }, 'Item deleted');
   }
 
   async function handleSave(form) {

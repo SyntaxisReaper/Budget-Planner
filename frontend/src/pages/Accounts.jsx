@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useUndoableAction } from "../hooks/useUndo.jsx";
 import { Plus, Pencil, Trash2, Wallet, Landmark } from 'lucide-react';
 import { useAccounts, useTransactions } from '../hooks/useBudget.js';
 import toast, { impactLight } from '../lib/haptics.js';
@@ -134,6 +135,7 @@ function SetBalanceModal({ account, onClose, onSave }) {
 }
 
 export default function Accounts() {
+  const { executeUndoable } = useUndoableAction();
   const { query, create, update, remove } = useAccounts();
   const { create: createTxn } = useTransactions({});
   const [modal, setModal] = useState(null); // null | 'add' | account object
@@ -145,17 +147,9 @@ export default function Accounts() {
   const totalBalance = activeAccounts.reduce((sum, a) => sum + Number(a.current_balance), 0);
 
   async function handleDelete(id) {
-    if (!confirm('Delete this account? (If it has transactions, it will be marked as inactive)')) return;
-    try {
-      const res = await remove.mutateAsync(id);
-      if (res?.data?.message) {
-        toast.success(res.data.message);
-      } else {
-        toast.success('Account removed');
-      }
-    } catch (err) {
-      toast.error(err.message);
-    }
+    executeUndoable(id, ['accounts'], async (tid) => {
+      await remove.mutateAsync(tid);
+    }, 'Account deleted / deactivated');
   }
 
   async function handleSave(form) {

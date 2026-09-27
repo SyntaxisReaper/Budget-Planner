@@ -7,15 +7,18 @@ router.use(authenticate);
 
 // GET /api/debts
 router.get('/', async (req, res) => {
-  const { kind } = req.query;
+  const { kind, direction } = req.query;
   let query = supabase
     .from('debts')
-    .select('*')
+    .select('*, people(id, name, phone)')
     .eq('user_id', req.userId)
     .order('created_at', { ascending: false });
 
   if (kind) {
     query = query.eq('kind', kind);
+  }
+  if (direction) {
+    query = query.eq('direction', direction);
   }
 
   const { data, error } = await query;
@@ -23,9 +26,31 @@ router.get('/', async (req, res) => {
   res.json(data);
 });
 
+// GET /api/debts/match
+router.get('/match', async (req, res) => {
+  const { name } = req.query;
+  if (!name) return res.json({ matches: [] });
+
+  const { data: debts, error } = await supabase
+    .from('debts')
+    .select('*, people(id, name, phone)')
+    .eq('user_id', req.userId)
+    .eq('status', 'active')
+    .not('person_id', 'is', null);
+
+  if (error) throw error;
+
+  const matches = debts.filter(d =>
+    d.people?.name?.toLowerCase().includes(name.toLowerCase()) ||
+    name.toLowerCase().includes(d.people?.name?.toLowerCase())
+  );
+
+  res.json({ matches });
+});
+
 // POST /api/debts
 router.post('/', async (req, res) => {
-  const { name, principal, debt_date, kind, interest_rate, min_payment, description, priority } = req.body;
+  const { name, principal, debt_date, kind, interest_rate, min_payment, description, priority, direction, person_id } = req.body;
   
   if (!name || principal == null) {
     return res.status(400).json({ error: 'name and principal are required' });
@@ -54,6 +79,8 @@ router.post('/', async (req, res) => {
       status: 'active',
       description: description ?? null,
       priority: priority ?? 'normal',
+      direction: direction || 'borrowed',
+      person_id: person_id || null,
     })
     .select()
     .single();
@@ -64,7 +91,7 @@ router.post('/', async (req, res) => {
 
 // PUT /api/debts/:id
 router.put('/:id', async (req, res) => {
-  const { name, debt_date, kind, interest_rate, min_payment, status, description, priority } = req.body;
+  const { name, debt_date, kind, interest_rate, min_payment, status, description, priority, direction, person_id } = req.body;
   
   if (min_payment != null && Number(min_payment) < 0) {
     return res.status(400).json({ error: 'min_payment cannot be negative' });
@@ -83,7 +110,9 @@ router.put('/:id', async (req, res) => {
       min_payment, 
       status, 
       description, 
-      priority: priority ?? 'normal' 
+      priority: priority ?? 'normal',
+      direction: direction || 'borrowed',
+      person_id: person_id || null
     })
     .eq('id', req.params.id)
     .eq('user_id', req.userId)

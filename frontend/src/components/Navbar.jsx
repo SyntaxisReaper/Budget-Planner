@@ -17,7 +17,7 @@ const navGroups = [
       { to: '/transactions', icon: ReceiptText,     label: 'Transactions' },
       { to: '/budget',       icon: Calculator,      label: 'Budget Planner' },
       { to: '/subscriptions',icon: Repeat,          label: 'Subscriptions'},
-      { to: '/people-ledger',icon: Users,           label: 'IOUs'         },
+
       { to: '/analytics',    icon: BarChart3,       label: 'Analytics'    },
     ]
   },

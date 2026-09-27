@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useUndoableAction } from "../hooks/useUndo.jsx";
 import { useNotes } from '../hooks/useBudget.js';
 import { FileText, Plus, Trash2, Edit3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,6 +54,7 @@ function NoteModal({ note, onClose, onSave }) {
 }
 
 export default function Notes() {
+  const { executeUndoable } = useUndoableAction();
   const { query, create, update, remove } = useNotes();
   const [editingNote, setEditingNote] = useState(undefined); // undefined means closed, null means new note, object means editing
   
@@ -83,7 +85,7 @@ export default function Notes() {
               <p className="text-sm text-muted line-clamp-3" style={{ whiteSpace: 'pre-wrap' }}>{note.content}</p>
               <div className="text-xs text-muted mt-auto pt-4 flex justify-between items-center">
                 <span>{format(new Date(note.created_at), 'MMM d, yyyy')}</span>
-                <button className="btn-icon" style={{ padding: 4, color: 'var(--color-danger)' }} onClick={(e) => { e.stopPropagation(); if(confirm('Delete note?')) remove.mutate(note.id); }}>
+                <button className="btn-icon" style={{ padding: 4, color: 'var(--color-danger)' }} onClick={(e) => { e.stopPropagation(); executeUndoable(note.id, ['notes'], (id) => remove.mutate(id), 'Note deleted'); }}>
                   <Trash2 size={14}/>
                 </button>
               </div>
