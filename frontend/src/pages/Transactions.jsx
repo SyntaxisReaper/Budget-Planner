@@ -581,7 +581,7 @@ export default function Transactions() {
       await queryClient.invalidateQueries({ queryKey: ['transactions'] });
     }}>
     <div className="page" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
-      <motion.div className="page-header flex items-center justify-between" variants={fadeUp} initial="hidden" animate="visible">
+      <motion.div className="page-header flex items-center justify-between" style={{ flexWrap: 'wrap', gap: '16px' }} variants={fadeUp} initial="hidden" animate="visible">
         <div>
           <h1 className="page-title">Transactions</h1>
           <p className="page-subtitle">
