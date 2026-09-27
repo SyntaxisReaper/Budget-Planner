@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TableVirtuoso } from 'react-virtuoso';
-import { Plus, Filter, ArrowRightLeft, Banknote } from 'lucide-react';
+import { Plus, Filter, ArrowRightLeft, Banknote, Pencil } from 'lucide-react';
 import { useTransactions, useItems, useAccounts, useDebts, useGoals, useSettings, useCategorizationTrainingData } from '../hooks/useBudget.js';
 import { trainCategorizer, predictCategory } from '../lib/categorization.js';
 import { computeCycleBounds } from '../lib/dateUtils.js';
@@ -22,22 +22,42 @@ function toLocalDatetimeString(date) {
   return new Date(date.getTime() - tzoffset).toISOString().slice(0, 16);
 }
 
-function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose, onCreate, onTransfer }) {
+function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose, onCreate, onUpdate, onTransfer, initialData, editMode }) {
   const [form, setForm] = useState({
-    account_id: accounts.length > 0 ? accounts[0].id : '',
-    type: 'expense',
-    amount: '',
-    occurred_at: toLocalDatetimeString(new Date()),
-    item_id: '',
-    debt_id: '',
-    goal_id: '',
+    account_id: initialData?.account_id || (accounts.length > 0 ? accounts[0].id : ''),
+    type: initialData?.type || 'expense',
+    amount: initialData?.amount ? String(initialData.amount) : '',
+    occurred_at: initialData?.occurred_at ? toLocalDatetimeString(new Date(initialData.occurred_at)) : toLocalDatetimeString(new Date()),
+    item_id: initialData?.item_id || '',
+    debt_id: initialData?.debt_id || '',
+    goal_id: initialData?.goal_id || '',
     to_account_id: '',
-    utr_id: '',
-    note: ''
+    utr_id: initialData?.utr_id || '',
+    note: initialData?.note || ''
   });
+
+  // Multi-item state
+  const [multiItems, setMultiItems] = useState(() => {
+    if (initialData?.transaction_items?.length > 0) {
+      return initialData.transaction_items.map(ti => ({ item_id: ti.item_id, amount: String(ti.amount) }));
+    }
+    return [];
+  });
+  const [splitEvenly, setSplitEvenly] = useState(false);
+  const [showItemPicker, setShowItemPicker] = useState(false);
+  const pickerRef = useRef(null);
   const [loading, setLoading] = useState(false);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+  // Close item picker on outside click
+  useEffect(() => {
+    function handleClick(e) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) setShowItemPicker(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   const handleTextChange = (field, value) => {
     setForm((p) => {
@@ -45,7 +65,7 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
       const combinedText = `${next.note || ''} ${next.utr_id || ''}`.trim();
       
       // Predict category only if expense and no explicit item is selected yet
-      if (combinedText.length >= 3 && next.type === 'expense' && !p.item_id) {
+      if (combinedText.length >= 3 && next.type === 'expense' && !p.item_id && multiItems.length === 0) {
         const predictedItemId = predictCategory(combinedText, wordFreq);
         if (predictedItemId) {
           next.item_id = predictedItemId;
@@ -54,6 +74,31 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
       return next;
     });
   };
+
+  function toggleItemInMulti(itemId) {
+    setMultiItems(prev => {
+      const exists = prev.find(i => i.item_id === itemId);
+      if (exists) return prev.filter(i => i.item_id !== itemId);
+      const newList = [...prev, { item_id: itemId, amount: '' }];
+      if (splitEvenly && form.amount) {
+        const each = (parseFloat(form.amount) / newList.length).toFixed(2);
+        return newList.map(i => ({ ...i, amount: each }));
+      }
+      return newList;
+    });
+    set('item_id', ''); // Clear single-item when using multi
+  }
+
+  function applySplitEvenly() {
+    const total = parseFloat(form.amount);
+    if (!total || multiItems.length === 0) return;
+    const each = (total / multiItems.length).toFixed(2);
+    setMultiItems(prev => prev.map(i => ({ ...i, amount: each })));
+  }
+
+  function updateItemAmount(itemId, val) {
+    setMultiItems(prev => prev.map(i => i.item_id === itemId ? { ...i, amount: val } : i));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -79,7 +124,15 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
       } else {
         payload.account_id = form.account_id;
         payload.type = form.type;
-        if (form.type === 'expense' && form.item_id) payload.item_id = form.item_id;
+        // Multi-item takes priority over single-item
+        if (form.type === 'expense' && multiItems.length > 1) {
+          payload.items = multiItems.map(i => ({ item_id: i.item_id, amount: parseFloat(i.amount) }));
+          payload.item_id = null;
+        } else if (form.type === 'expense' && form.item_id) {
+          payload.item_id = form.item_id;
+        } else if (form.type === 'expense' && multiItems.length === 1) {
+          payload.item_id = multiItems[0].item_id;
+        }
         if (form.type === 'debt_payment') {
           if (!form.debt_id) throw new Error('Please select a debt/rent');
           payload.debt_id = form.debt_id;
@@ -88,10 +141,14 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
           if (!form.goal_id) throw new Error('Please select a goal');
           payload.goal_id = form.goal_id;
         }
-        await onCreate(payload);
+        if (editMode) {
+          await onUpdate({ id: initialData.id, ...payload });
+        } else {
+          await onCreate(payload);
+        }
       }
       
-      toast.success(form.type === 'transfer_out' ? 'Transfer completed!' : 'Transaction logged!');
+      toast.success(editMode ? 'Transaction updated!' : (form.type === 'transfer_out' ? 'Transfer completed!' : 'Transaction logged!'));
       onClose();
     } catch (err) {
       toast.error(err.message);
@@ -99,6 +156,8 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
       setLoading(false);
     }
   }
+
+  const selectedItemNames = multiItems.map(i => items.find(it => it.id === i.item_id)?.name).filter(Boolean);
 
   return (
     <motion.div
@@ -114,7 +173,7 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
         dragConstraints={{ top: 0, bottom: 0 }}
         onDragEnd={(e, info) => { if (info.offset.y > 100) onClose(); }}
       >
-        <h2 className="modal-title">➕ Log Transaction</h2>
+        <h2 className="modal-title">{editMode ? '✏️ Edit Transaction' : '➕ Log Transaction'}</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="form-group">
             <label className="label">Account</label>
@@ -130,10 +189,11 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
               <select className="select" value={form.type} onChange={(e) => {
                 set('type', e.target.value);
                 set('item_id', ''); set('debt_id', ''); set('goal_id', ''); set('to_account_id', '');
-              }}>
+                setMultiItems([]);
+              }} disabled={editMode && ['transfer_in', 'transfer_out'].includes(form.type)}>
                 <option value="expense">Expense</option>
                 <option value="income">Income</option>
-                <option value="transfer_out">Transfer</option>
+                {!editMode && <option value="transfer_out">Transfer</option>}
                 <option value="debt_payment">Debt / Rent Payment</option>
                 <option value="goal_contribution">Goal Contribution</option>
               </select>
@@ -145,12 +205,80 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
           </div>
 
           {form.type === 'expense' && (
-            <div className="form-group">
-              <label className="label">Item (optional)</label>
-              <select className="select" value={form.item_id} onChange={(e) => set('item_id', e.target.value)}>
-                <option value="">— none —</option>
-                {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-              </select>
+            <div className="form-group" ref={pickerRef} style={{ position: 'relative' }}>
+              <label className="label">Items (optional)</label>
+              <div
+                className="select"
+                style={{ cursor: 'pointer', minHeight: 36, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                onClick={() => setShowItemPicker(v => !v)}
+              >
+                <span style={{ color: selectedItemNames.length ? 'var(--color-text)' : 'var(--color-text-3)', fontSize: '0.9rem' }}>
+                  {selectedItemNames.length > 0 ? selectedItemNames.join(', ') : (form.item_id ? items.find(i => i.id === form.item_id)?.name : '— none —')}
+                </span>
+                <span style={{ fontSize: '0.7rem', opacity: 0.5 }}>▾</span>
+              </div>
+              {showItemPicker && (
+                <div style={{ position: 'absolute', zIndex: 100, top: '100%', left: 0, right: 0, background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', boxShadow: '0 8px 24px rgba(0,0,0,0.2)', maxHeight: 220, overflowY: 'auto', marginTop: 4 }}>
+                  <div style={{ padding: '6px 12px', borderBottom: '1px solid var(--color-border)' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.8rem', color: 'var(--color-text-3)' }}>
+                      <input type="checkbox" checked={!form.item_id && multiItems.length === 0} onChange={() => { setMultiItems([]); set('item_id', ''); }} /> None
+                    </label>
+                  </div>
+                  {items.map(item => (
+                    <label key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--color-border)' }}>
+                      <input
+                        type="checkbox"
+                        checked={multiItems.some(i => i.item_id === item.id) || form.item_id === item.id}
+                        onChange={() => {
+                          if (multiItems.length === 0 && form.item_id === item.id) {
+                            set('item_id', '');
+                          } else if (multiItems.length === 0 && !form.item_id) {
+                            set('item_id', item.id);
+                          } else {
+                            // Switch to multi mode
+                            if (form.item_id && multiItems.length === 0) {
+                              setMultiItems([{ item_id: form.item_id, amount: '' }]);
+                              set('item_id', '');
+                            }
+                            toggleItemInMulti(item.id);
+                          }
+                        }}
+                      />
+                      <span>{item.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {/* Per-item amount inputs for multi-item */}
+              {multiItems.length > 1 && (
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span className="text-xs text-muted">Split amounts</span>
+                    <button type="button" className="btn btn-ghost" style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                      onClick={() => { setSplitEvenly(true); applySplitEvenly(); }}>
+                      Split Evenly
+                    </button>
+                  </div>
+                  {multiItems.map(mi => (
+                    <div key={mi.item_id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ flex: 1, fontSize: '0.85rem' }}>{items.find(i => i.id === mi.item_id)?.name}</span>
+                      <CurrencyInput
+                        className="input"
+                        style={{ width: 100, textAlign: 'right' }}
+                        placeholder="0.00"
+                        value={mi.amount}
+                        onChange={(v) => updateItemAmount(mi.item_id, v)}
+                      />
+                    </div>
+                  ))}
+                  {(() => {
+                    const total = parseFloat(form.amount) || 0;
+                    const sum = multiItems.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+                    const diff = Math.abs(total - sum);
+                    return diff > 0.01 ? <span style={{ fontSize: '0.75rem', color: 'var(--color-danger)' }}>⚠ Sum ₹{sum.toFixed(2)} ≠ Total ₹{total.toFixed(2)}</span> : null;
+                  })()}
+                </div>
+              )}
             </div>
           )}
 
@@ -205,7 +333,7 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? <span className="spinner" /> : 'Log Transaction'}
+              {loading ? <span className="spinner" /> : (editMode ? 'Save Changes' : 'Log Transaction')}
             </button>
           </div>
         </form>
@@ -220,6 +348,7 @@ export default function Transactions() {
   const [month, setMonth] = useState(new Date().toISOString().substring(0, 7));
   const [searchParams] = useSearchParams();
   const [showModal, setShowModal] = useState(searchParams.get('add') === 'true');
+  const [editingTransaction, setEditingTransaction] = useState(null);
   const [typeFilter, setTypeFilter] = useState('all');
   const [accountFilter, setAccountFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -231,7 +360,7 @@ export default function Transactions() {
   const trainingQuery = useCategorizationTrainingData();
   const wordFreq = useMemo(() => trainCategorizer(trainingQuery.data), [trainingQuery.data]);
 
-  const { query, create, remove } = useTransactions({ from: cycleStart, to: cycleEnd });
+  const { query, create, update, remove } = useTransactions({ from: cycleStart, to: cycleEnd });
   const { query: itemsQuery } = useItems();
   const { query: accountsQuery, transfer } = useAccounts();
   const { query: debtsQuery } = useDebts();
@@ -282,9 +411,14 @@ export default function Transactions() {
   }
 
   function renderTarget(t) {
+    // Multi-item transaction
+    if (t.transaction_items?.length > 1) {
+      return <span>{t.transaction_items.map(ti => ti.items?.name || itemMap[ti.item_id]?.name).filter(Boolean).join(', ')}</span>;
+    }
     if (t.type === 'expense' && t.item_id) return t.items?.name || itemMap[t.item_id]?.name || 'Item';
     if (t.type === 'debt_payment' && t.debt_id) return t.debts?.name || debtMap[t.debt_id]?.name || 'Debt';
     if (t.type === 'goal_contribution' && t.goal_id) return t.goals?.name || goalMap[t.goal_id]?.name || 'Goal';
+    if (t.type === 'expense' && t.subscription_id) return <span className="text-primary font-medium">{t.subscriptions?.name || 'Subscription'}</span>;
     if (t.type === 'expense' && !t.item_id && t.note?.startsWith('Auto-payment: ')) {
       return <span className="text-primary font-medium">{t.note.replace('Auto-payment: ', 'Subscription: ')}</span>;
     }
@@ -414,9 +548,21 @@ export default function Transactions() {
                     {(t.type === 'income' || t.type === 'transfer_in') ? '+' : '-'}{fmt.format(t.amount)}
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    <button className="btn btn-icon btn-ghost btn-sm text-muted hover:text-danger" onClick={() => handleDelete(t.id)}>
-                      ×
-                    </button>
+                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                      {!['transfer_in', 'transfer_out'].includes(t.type) && (
+                        <button
+                          className="btn btn-icon btn-ghost btn-sm text-muted"
+                          title="Edit"
+                          onClick={() => setEditingTransaction(t)}
+                          style={{ color: 'var(--color-text-3)' }}
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      )}
+                      <button className="btn btn-icon btn-ghost btn-sm text-muted hover:text-danger" onClick={() => handleDelete(t.id)}>
+                        ×
+                      </button>
+                    </div>
                   </td>
                 </>
               )}
@@ -426,16 +572,19 @@ export default function Transactions() {
       </div>
 
       <AnimatePresence>
-        {showModal && (
+        {(showModal || editingTransaction) && (
           <AddTransactionModal 
             items={items} 
             accounts={accounts}
             debts={debts}
             goals={goals}
             wordFreq={wordFreq}
-            onClose={() => setShowModal(false)} 
+            onClose={() => { setShowModal(false); setEditingTransaction(null); }} 
             onCreate={create.mutateAsync} 
+            onUpdate={update.mutateAsync}
             onTransfer={transfer.mutateAsync}
+            initialData={editingTransaction}
+            editMode={!!editingTransaction}
           />
         )}
       </AnimatePresence>

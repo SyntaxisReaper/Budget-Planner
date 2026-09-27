@@ -43,7 +43,7 @@ router.get('/:month', async (req, res) => {
 
   const { data: txns } = await supabase
     .from('transactions')
-    .select('item_id, debt_id, goal_id, type, amount')
+    .select('item_id, debt_id, goal_id, subscription_id, type, amount, transaction_items(item_id, amount)')
     .eq('user_id', req.userId)
     .gte('occurred_at', start)
     .lte('occurred_at', end);
@@ -57,6 +57,14 @@ router.get('/:month', async (req, res) => {
         spentMap[`debt_${t.debt_id}`] = (spentMap[`debt_${t.debt_id}`] || 0) + Number(t.amount);
       } else if (t.type === 'goal_contribution' && t.goal_id) {
         spentMap[`goal_${t.goal_id}`] = (spentMap[`goal_${t.goal_id}`] || 0) + Number(t.amount);
+      } else if (t.type === 'expense' && t.subscription_id) {
+        spentMap[`subscription_${t.subscription_id}`] = (spentMap[`subscription_${t.subscription_id}`] || 0) + Number(t.amount);
+      }
+      // Also accumulate multi-item splits from transaction_items
+      if (t.transaction_items && Array.isArray(t.transaction_items)) {
+        t.transaction_items.forEach(ti => {
+          spentMap[`item_${ti.item_id}`] = (spentMap[`item_${ti.item_id}`] || 0) + Number(ti.amount);
+        });
       }
     });
   }

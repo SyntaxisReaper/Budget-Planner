@@ -132,7 +132,7 @@ export default function BudgetPlanner() {
         <motion.div className="card stat-card" variants={itemVariants}>
           <div className="stat-label">Remaining to zero (vs Planned Income)</div>
           <div className="stat-value text-muted">
-            {settings ? fmt.format(Math.max(0, Number(settings.data?.cycle_income || settings.cycle_income) - totalAllocated)) : '₹0.00'}
+            {settings ? fmt.format(Math.max(0, Number(settings.data?.cycle_income ?? 0) - totalAllocated)) : '₹0.00'}
           </div>
         </motion.div>
       </motion.div>

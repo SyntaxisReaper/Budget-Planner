@@ -204,8 +204,8 @@ export function useTransactions(filters = {}) {
     },
   });
 
-  const remove = useMutation({
-    mutationFn: (id) => apiClient.delete(`/transactions/${id}`),
+  const update = useMutation({
+    mutationFn: ({ id, ...data }) => apiClient.put(`/transactions/${id}`, data),
     onSuccess: () => {
       triggerHaptic();
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -213,10 +213,11 @@ export function useTransactions(filters = {}) {
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['debts'] });
       queryClient.invalidateQueries({ queryKey: ['goals'] });
-    }
+      queryClient.invalidateQueries({ queryKey: ['budget'] });
+    },
   });
 
-  return { query, create, remove };
+  return { query, create, update, remove };
 }
 
 export function useCategorizationTrainingData() {
@@ -433,7 +434,7 @@ export function useCalendarEvents() {
 
       // Add tasks
       if (tasksRes.status === 'fulfilled') {
-        (tasksRes.value?.data || []).forEach(t => {
+        (tasksRes.value || []).forEach(t => {
           if (t.due_date) {
             events.push({
               id: `task-${t.id}`,
@@ -449,7 +450,7 @@ export function useCalendarEvents() {
 
       // Add trips
       if (tripsRes.status === 'fulfilled') {
-        (tripsRes.value?.data || []).forEach(t => {
+        (tripsRes.value || []).forEach(t => {
           if (t.start_date) {
             events.push({
               id: `trip-${t.id}-start`,
@@ -464,7 +465,7 @@ export function useCalendarEvents() {
 
       // Add subscriptions (using next_date)
       if (subsRes.status === 'fulfilled') {
-        (subsRes.value?.data || []).forEach(s => {
+        (subsRes.value || []).forEach(s => {
           if (s.next_date) {
             events.push({
               id: `sub-${s.id}`,
@@ -480,7 +481,7 @@ export function useCalendarEvents() {
 
       // Add debts (using debt_date and remaining_balance)
       if (debtsRes.status === 'fulfilled') {
-        (debtsRes.value?.data || []).forEach(d => {
+        (debtsRes.value || []).forEach(d => {
           if (d.debt_date) {
             events.push({
               id: `debt-${d.id}`,
@@ -499,7 +500,7 @@ export function useCalendarEvents() {
         const today = new Date();
         const currentYear = today.getFullYear();
         
-        (contactsRes.value?.data || []).forEach(c => {
+        (contactsRes.value || []).forEach(c => {
           if (c.birthday) {
             // Fix birthday math: construct local date string directly
             const [y, m, d] = c.birthday.split('T')[0].split('-');

@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
 
   let query = supabase
     .from('transactions')
-    .select('*, items(name, priority), accounts(name, type), debts(name), goals(name)')
+    .select('*, items(name, priority), accounts(name, type), debts(name), goals(name), subscriptions(name), transaction_items(id, amount, item_id, items(name))')
     .eq('user_id', req.userId)
     .order('occurred_at', { ascending: false });
 
@@ -79,7 +79,7 @@ router.post('/bulk', async (req, res) => {
 
 // POST /api/transactions
 router.post('/', async (req, res) => {
-  const { account_id, type, amount, occurred_at, item_id, debt_id, goal_id, utr_id, note } = req.body;
+  const { account_id, type, amount, occurred_at, item_id, items, debt_id, goal_id, subscription_id, utr_id, note } = req.body;
 
   if (!account_id || !type || amount == null || !occurred_at) {
     return res.status(400).json({ error: 'account_id, type, amount, and occurred_at are required' });
@@ -99,6 +99,14 @@ router.post('/', async (req, res) => {
 
   if (type === 'goal_contribution' && !goal_id) {
     return res.status(400).json({ error: 'goal_id is required for goal_contribution' });
+  }
+
+  // Validate multi-item amounts sum to total
+  if (items && Array.isArray(items) && items.length > 0) {
+    const itemsSum = items.reduce((s, i) => s + Number(i.amount), 0);
+    if (Math.abs(itemsSum - Number(amount)) > 0.01) {
+      return res.status(400).json({ error: `Sum of item amounts (${itemsSum}) must equal transaction amount (${amount})` });
+    }
   }
 
   // Verify Account Ownership and Overdraft
@@ -125,6 +133,14 @@ router.post('/', async (req, res) => {
     if (!item) return res.status(404).json({ error: 'Item not found or not owned by user' });
   }
 
+  // Verify multi-item ownership
+  if (items && Array.isArray(items) && items.length > 0) {
+    for (const ti of items) {
+      const { data: item } = await supabase.from('items').select('id').eq('id', ti.item_id).eq('user_id', req.userId).single();
+      if (!item) return res.status(404).json({ error: `Item ${ti.item_id} not found or not owned by user` });
+    }
+  }
+
   // Verify Debt Ownership and Overpayment
   if (debt_id) {
     const { data: debt } = await supabase.from('debts').select('id, remaining_balance').eq('id', debt_id).eq('user_id', req.userId).single();
@@ -140,7 +156,7 @@ router.post('/', async (req, res) => {
     if (!goal) return res.status(404).json({ error: 'Goal not found or not owned by user' });
   }
 
-  const { data, error } = await supabase
+  const { data: txn, error } = await supabase
     .from('transactions')
     .insert({
       user_id: req.userId,
@@ -151,6 +167,7 @@ router.post('/', async (req, res) => {
       item_id: item_id || null,
       debt_id: debt_id || null,
       goal_id: goal_id || null,
+      subscription_id: subscription_id || null,
       utr_id: utr_id || null,
       note: note || null
     })
@@ -158,7 +175,111 @@ router.post('/', async (req, res) => {
     .single();
 
   if (error) throw error;
-  res.status(201).json(data);
+
+  // Bulk insert transaction_items for multi-item transactions
+  if (items && Array.isArray(items) && items.length > 0) {
+    const { error: tiError } = await supabase
+      .from('transaction_items')
+      .insert(items.map(i => ({ transaction_id: txn.id, item_id: i.item_id, amount: i.amount })));
+    if (tiError) throw tiError;
+  }
+
+  res.status(201).json(txn);
+});
+
+// PUT /api/transactions/:id — Edit via DELETE + INSERT to correctly fire balance triggers
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { account_id, type, amount, occurred_at, item_id, items, debt_id, goal_id, subscription_id, utr_id, note } = req.body;
+
+  if (!account_id || !type || amount == null || !occurred_at) {
+    return res.status(400).json({ error: 'account_id, type, amount, and occurred_at are required' });
+  }
+  if (amount <= 0) return res.status(400).json({ error: 'Amount must be greater than zero' });
+  if (['transfer_in', 'transfer_out'].includes(type)) {
+    return res.status(400).json({ error: 'Cannot edit transfer transactions' });
+  }
+  if (type === 'debt_payment' && !debt_id) return res.status(400).json({ error: 'debt_id is required for debt_payment' });
+  if (type === 'goal_contribution' && !goal_id) return res.status(400).json({ error: 'goal_id is required for goal_contribution' });
+
+  if (items && Array.isArray(items) && items.length > 0) {
+    const itemsSum = items.reduce((s, i) => s + Number(i.amount), 0);
+    if (Math.abs(itemsSum - Number(amount)) > 0.01) {
+      return res.status(400).json({ error: `Sum of item amounts (${itemsSum}) must equal transaction amount (${amount})` });
+    }
+  }
+
+  // Confirm ownership of existing transaction
+  const { data: existing } = await supabase
+    .from('transactions').select('id, type').eq('id', id).eq('user_id', req.userId).single();
+  if (!existing) return res.status(404).json({ error: 'Transaction not found or not owned by user' });
+  if (['transfer_in', 'transfer_out'].includes(existing.type)) {
+    return res.status(400).json({ error: 'Cannot edit transfer transactions' });
+  }
+
+  // Verify account ownership
+  const { data: account, error: accError } = await supabase
+    .from('accounts').select('id').eq('id', account_id).eq('user_id', req.userId).single();
+  if (accError || !account) return res.status(404).json({ error: 'Account not found or not owned by user' });
+
+  // Delete old row — trigger reverses old balance effect
+  const { error: delError } = await supabase
+    .from('transactions').delete().eq('id', id).eq('user_id', req.userId);
+  if (delError) throw delError;
+
+  // Refetch balance after trigger has reversed old amount
+  const { data: updatedAccount } = await supabase
+    .from('accounts').select('current_balance').eq('id', account_id).single();
+  const currentBalance = updatedAccount?.current_balance ?? 0;
+
+  if (['expense', 'debt_payment', 'goal_contribution'].includes(type) && currentBalance < amount) {
+    return res.status(400).json({ error: 'Insufficient funds in account for this transaction' });
+  }
+
+  // Verify Debt
+  if (debt_id) {
+    const { data: debt } = await supabase.from('debts').select('id, remaining_balance').eq('id', debt_id).eq('user_id', req.userId).single();
+    if (!debt) return res.status(404).json({ error: 'Debt not found or not owned by user' });
+    if (type === 'debt_payment' && debt.remaining_balance < amount) {
+      return res.status(400).json({ error: 'Payment exceeds remaining debt balance' });
+    }
+  }
+
+  // Verify Goal
+  if (goal_id) {
+    const { data: goal } = await supabase.from('goals').select('id').eq('id', goal_id).eq('user_id', req.userId).single();
+    if (!goal) return res.status(404).json({ error: 'Goal not found or not owned by user' });
+  }
+
+  // Insert new row
+  const { data: newTxn, error: insertError } = await supabase
+    .from('transactions')
+    .insert({
+      user_id: req.userId,
+      account_id,
+      type,
+      amount,
+      occurred_at,
+      item_id: item_id || null,
+      debt_id: debt_id || null,
+      goal_id: goal_id || null,
+      subscription_id: subscription_id || null,
+      utr_id: utr_id || null,
+      note: note || null
+    })
+    .select()
+    .single();
+  if (insertError) throw insertError;
+
+  // Re-insert transaction_items
+  if (items && Array.isArray(items) && items.length > 0) {
+    const { error: tiError } = await supabase
+      .from('transaction_items')
+      .insert(items.map(i => ({ transaction_id: newTxn.id, item_id: i.item_id, amount: i.amount })));
+    if (tiError) throw tiError;
+  }
+
+  res.json(newTxn);
 });
 
 // DELETE /api/transactions/:id

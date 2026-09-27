@@ -116,7 +116,8 @@ router.post('/process', async (req, res) => {
           type: 'expense',
           amount: sub.amount,
           occurred_at: format(currentNextDate, "yyyy-MM-dd'T'12:00:00'Z'"),
-          note: `Auto-payment: ${sub.name}`
+          note: `Auto-payment: ${sub.name}`,
+          subscription_id: sub.id
         });
       
       if (txError) {

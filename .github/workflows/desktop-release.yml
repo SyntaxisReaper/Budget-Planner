@@ -1,0 +1,82 @@
+name: Desktop Release
+
+on:
+  push:
+    tags:
+      - 'desktop-v*'
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os: macos-latest
+            args: '--target aarch64-apple-darwin'
+          - os: macos-latest
+            args: '--target x86_64-apple-darwin'
+          - os: ubuntu-22.04
+            args: ''
+          - os: windows-latest
+            args: ''
+
+    runs-on: ${{ matrix.platform.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---- System deps (Linux only) ----
+      - name: Install Linux dependencies
+        if: matrix.platform.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      # ---- Rust toolchain ----
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './desktop/src-tauri -> target'
+
+      # ---- Node + npm ----
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ---- Build & release ----
+      - name: Build and release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          # Pass Vite env vars at build time
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        with:
+          projectPath: desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Budget Planner ${{ github.ref_name }}'
+          releaseBody: |
+            See the [CHANGELOG](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.platform.args }}

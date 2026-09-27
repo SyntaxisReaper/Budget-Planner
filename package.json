@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "concurrently -n \"backend,frontend,desktop\" -c \"cyan,magenta,yellow\" \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\" \"npm run dev --workspace=desktop\"",
     "install:all": "npm install && npm install --workspace=backend && npm install --workspace=frontend && npm install --workspace=desktop",
-    "desktop:dev": "concurrently -n \"backend,desktop\" -c \"cyan,yellow\" \"npm run dev --workspace=backend\" \"npm run dev --workspace=desktop\""
+    "desktop:dev": "concurrently -n \"backend,desktop\" -c \"cyan,yellow\" \"npm run dev --workspace=backend\" \"npm run dev --workspace=desktop\"",
+    "desktop:build": "npm run build --workspace=desktop"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
