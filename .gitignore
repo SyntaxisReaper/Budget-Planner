@@ -6,3 +6,12 @@ dist/
 .DS_Store
 /*.md
 .agents/
+
+# Rust / Tauri build artifacts
+desktop/src-tauri/target/
+
+# Log files
+*.log
+dev_output.log
+out.log
+err.log
