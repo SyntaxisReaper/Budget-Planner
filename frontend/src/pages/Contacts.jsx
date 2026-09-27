@@ -6,8 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { staggerContainer, itemVariants, backdropVariants, modalVariants } from '../lib/motion.js';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../lib/utils.js';
+import ContactHistoryModal from '../components/ContactHistoryModal.jsx';
 
-function ContactModal({ contact, onClose, onSave }) {
+function ContactModal({ contact, onClose, onSave, onViewHistory }) {
   const [form, setForm] = useState({ 
     name: contact?.name || '', 
     email: contact?.email || '', 
@@ -55,7 +56,18 @@ function ContactModal({ contact, onClose, onSave }) {
               <label className="label">Birthday (Optional)</label>
               <input type="date" className="input"
                 value={form.birthday} onChange={e => setForm({ ...form, birthday: e.target.value })} />
-            </div>
+          </div>
+          
+          {contact && (
+            <button 
+              type="button" 
+              className="btn btn-ghost w-full flex justify-center gap-2 mt-2 border border-border" 
+              onClick={() => onViewHistory(contact)}
+            >
+              View Transaction History
+            </button>
+          )}
+
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn btn-primary" disabled={loading}>
@@ -74,6 +86,7 @@ export default function Contacts() {
   const { query: tripsQuery } = useTrips();
   
   const [editingContact, setEditingContact] = useState(undefined);
+  const [viewingHistoryFor, setViewingHistoryFor] = useState(null);
   const navigate = useNavigate();
   
   const contacts = query.data || [];
@@ -146,6 +159,16 @@ export default function Contacts() {
             contact={editingContact} 
             onClose={() => setEditingContact(undefined)} 
             onSave={(data) => editingContact ? update.mutateAsync({ id: editingContact.id, ...data }) : create.mutateAsync(data)} 
+            onViewHistory={(contact) => {
+              setEditingContact(undefined);
+              setViewingHistoryFor(contact);
+            }}
+          />
+        )}
+        {viewingHistoryFor !== null && (
+          <ContactHistoryModal 
+            contact={viewingHistoryFor} 
+            onClose={() => setViewingHistoryFor(null)} 
           />
         )}
       </AnimatePresence>

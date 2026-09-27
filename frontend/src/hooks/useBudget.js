@@ -363,6 +363,14 @@ export function useContacts() {
   return { query, create, update, remove };
 }
 
+export function useContactHistory(contactId) {
+  return useQuery({
+    queryKey: ['contact-history', contactId],
+    queryFn: () => apiClient.get(`/contacts/${contactId}/history`),
+    enabled: !!contactId,
+  });
+}
+
 export function useTasks() {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ['tasks'], queryFn: () => apiClient.get('/tasks') });

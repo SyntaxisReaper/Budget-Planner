@@ -9,7 +9,7 @@ router.use(authenticate);
 router.get('/', async (req, res) => {
   const { data, error } = await supabase
     .from('tasks')
-    .select('*')
+    .select('*, task_comments(count)')
     .eq('user_id', req.userId)
     .order('created_at', { ascending: false });
 

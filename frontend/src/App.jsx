@@ -12,7 +12,7 @@ import { useSupabaseAuth } from './hooks/useSupabaseAuth.js';
 import { useVersionCheck } from './hooks/useVersionCheck.js';
 import { useSubscriptions, useAccounts, useDebts, useContacts } from './hooks/useBudget.js';
 import { useTrips } from './hooks/useTrips.js';
-import { requestNotificationPermissions, scheduleUpcomingReminders, checkLowBalance, notifyDebtPaid } from './lib/notifications.js';
+import { requestNotificationPermissions, scheduleUpcomingReminders, checkLowBalance, notifyDebtPaid, scheduleWeeklyDigest } from './lib/notifications.js';
 import toast, { triggerCelebration } from './lib/haptics.js';
 import apiClient from './lib/apiClient.js';
 import Navbar from './components/Navbar.jsx';
@@ -204,6 +204,9 @@ function NotificationManager() {
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
       requestNotificationPermissions();
+      apiClient.get('/analytics/weekly-digest')
+        .then(scheduleWeeklyDigest)
+        .catch(e => console.error('Digest err', e));
     }
   }, []);
 

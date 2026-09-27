@@ -12,6 +12,7 @@ async function setupChannels() {
     await LocalNotifications.createChannel({ id: 'bills', name: 'Bills & Reminders', importance: 4, visibility: 1 });
     await LocalNotifications.createChannel({ id: 'alerts', name: 'Low Balance Alerts', importance: 5, visibility: 1 });
     await LocalNotifications.createChannel({ id: 'celebrations', name: 'Celebrations', importance: 4, visibility: 1 });
+    await LocalNotifications.createChannel({ id: 'weekly_digest', name: 'Weekly Digest', importance: 3, visibility: 0 });
     channelsCreated = true;
   } catch(e) {
     console.error('Failed to create notification channels', e);
@@ -168,4 +169,48 @@ export async function checkLowBalance(accounts) {
       await LocalNotifications.schedule({ notifications: notificationsToSchedule });
     }
   } catch (e) {}
+}
+
+export async function scheduleWeeklyDigest(digestData) {
+  if (!Capacitor.isNativePlatform()) return;
+  const granted = await requestNotificationPermissions();
+  if (!granted) return;
+
+  try {
+    // Find the next Sunday 9 AM
+    const now = new Date();
+    const nextSunday = new Date(now);
+    const daysUntilSunday = (7 - now.getDay()) % 7 || 7;
+    nextSunday.setDate(now.getDate() + daysUntilSunday);
+    nextSunday.setHours(9, 0, 0, 0);
+
+    // Cancel any existing weekly digest notification
+    const pending = await LocalNotifications.getPending();
+    const existing = pending.notifications.filter(n => n.extra?.type === 'weekly_digest');
+    if (existing.length > 0) {
+      await LocalNotifications.cancel({ notifications: existing });
+    }
+
+    const { total_spent, three_week_avg, change_pct, trending_up, spotlight_goal } = digestData;
+    const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+    const trend = trending_up ? `↑${change_pct.toFixed(0)}% vs avg` : `↓${change_pct.toFixed(0)}% vs avg`;
+    
+    let bodyText = trend;
+    if (spotlight_goal) {
+      bodyText += ` • ${spotlight_goal.name}: ${spotlight_goal.pct.toFixed(0)}% funded`;
+    }
+
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: 99999,   // fixed ID so it's always the same slot, never stacks
+        title: `📊 Weekly Digest — Spent ${fmt.format(total_spent)}`,
+        body: bodyText,
+        schedule: { at: nextSunday },
+        channelId: 'weekly_digest',
+        extra: { type: 'weekly_digest' }
+      }]
+    });
+  } catch (e) {
+    console.error('Failed to schedule weekly digest', e);
+  }
 }
