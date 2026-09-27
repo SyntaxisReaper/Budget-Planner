@@ -7,7 +7,7 @@ import { staggerContainer, itemVariants, backdropVariants, modalVariants } from 
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '../lib/utils.js';
 import ContactHistoryModal from '../components/ContactHistoryModal.jsx';
-import { apiClient } from '../lib/apiClient.js';
+import apiClient from '../lib/apiClient.js';
 import toast from 'react-hot-toast';
 
 function ImportContactsButton({ onSuccess }) {
