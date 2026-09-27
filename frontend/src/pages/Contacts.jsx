@@ -9,7 +9,7 @@ import { formatCurrency } from '../lib/utils.js';
 import ContactHistoryModal from '../components/ContactHistoryModal.jsx';
 import apiClient from '../lib/apiClient.js';
 import toast from 'react-hot-toast';
-import { useUndo } from '../hooks/useUndo.js';
+import { useUndoableAction } from '../hooks/useUndo.jsx';
 
 function ImportContactsButton({ onSuccess }) {
   const [importing, setImporting] = useState(false);
@@ -134,7 +134,7 @@ export default function Contacts() {
   const [editingContact, setEditingContact] = useState(undefined);
   const [viewingHistoryFor, setViewingHistoryFor] = useState(null);
   const navigate = useNavigate();
-  const { executeUndoable } = useUndo();
+  const { executeUndoable } = useUndoableAction();
 
   async function handleDelete(id) {
     executeUndoable(id, ['contacts', 'calendarEvents'], async (tid) => {
