@@ -14,10 +14,61 @@
 
 import Tesseract from 'tesseract.js';
 import sharp from 'sharp';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { parseReceiptText } from './receiptParser.js';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+let fewShotExamples = null;
+
+async function getFewShotExamples() {
+  if (fewShotExamples) return fewShotExamples;
+  fewShotExamples = [];
+  try {
+    const screenshotsDir = path.join(__dirname, '..', '..', '..', 'Screenshots');
+    const examples = [
+      {
+        file: 'Google Pay.jpeg',
+        json: { amount: 500, recipient: "ARYAN", utr_id: "627081035440", date: "2026-09-27T10:47:00+05:30", app_source: "googlepay", confidence: 1.0 }
+      },
+      {
+        file: 'PhonePe.jpeg',
+        json: { amount: 100, recipient: "Riya", utr_id: "185532067416", date: "2026-08-14T11:47:00+05:30", app_source: "phonepe", confidence: 1.0 }
+      },
+      {
+        file: 'Paytm.jpeg',
+        json: { amount: 30, recipient: "Mangal", utr_id: "314702870293", date: "2026-09-14T17:47:00+05:30", app_source: "paytm", confidence: 1.0 }
+      },
+      {
+        file: 'BHIM.jpeg',
+        json: { amount: 20, recipient: "UMESH", utr_id: "203616546987", date: "2026-09-27T12:00:00+05:30", app_source: "bhim", confidence: 1.0 }
+      },
+      {
+        file: 'Navi.jpeg',
+        json: { amount: 162, recipient: "Blinkit", utr_id: "005368009683", date: "2026-09-27T10:33:00+05:30", app_source: "navi", confidence: 1.0 }
+      }
+    ];
+
+    fewShotExamples.push("Here are some examples of what to extract from different UPI apps:\n");
+    for (const ex of examples) {
+      const filePath = path.join(screenshotsDir, ex.file);
+      if (fs.existsSync(filePath)) {
+        const buffer = fs.readFileSync(filePath);
+        fewShotExamples.push({ inlineData: { data: buffer.toString('base64'), mimeType: 'image/jpeg' } });
+        fewShotExamples.push(`Expected output for ${ex.file}:\n${JSON.stringify(ex.json, null, 2)}\n\n`);
+      }
+    }
+    fewShotExamples.push("Now, extract the data for the following receipt:\n");
+  } catch (err) {
+    console.warn('[receiptScanner] Failed to load few-shot examples:', err.message);
+  }
+  return fewShotExamples;
+}
+
 
 // ─── Primary: Gemini Vision ────────────────────────────────────────────────────
 
@@ -45,10 +96,14 @@ export async function scanWithGemini(base64Image, mimeType = 'image/jpeg') {
     model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
   });
 
-  const result = await model.generateContent([
-    { inlineData: { data: base64Image, mimeType } },
+  const examples = await getFewShotExamples();
+  const promptContent = [
     GEMINI_PROMPT,
-  ]);
+    ...examples,
+    { inlineData: { data: base64Image, mimeType } }
+  ];
+
+  const result = await model.generateContent(promptContent);
 
   const raw = result.response.text().trim();
   // Strip accidental markdown code fences
