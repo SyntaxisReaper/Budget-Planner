@@ -217,6 +217,19 @@ export function useTransactions(filters = {}) {
     },
   });
 
+  const remove = useMutation({
+    mutationFn: (id) => apiClient.delete(`/transactions/${id}`),
+    onSuccess: () => {
+      triggerHaptic();
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['debts'] });
+      queryClient.invalidateQueries({ queryKey: ['goals'] });
+      queryClient.invalidateQueries({ queryKey: ['budget'] });
+    },
+  });
+
   return { query, create, update, remove };
 }
 
@@ -416,19 +429,20 @@ export function useLinks(params = {}) {
 
 
 
-export function useCalendarEvents() {
+export function useCalendarEvents(monthStart, monthEnd) {
   const query = useQuery({
-    queryKey: ['calendarEvents'],
+    queryKey: ['calendarEvents', monthStart, monthEnd],
     queryFn: async () => {
       const results = await Promise.allSettled([
         apiClient.get('/debts'),
         apiClient.get('/subscriptions'),
         apiClient.get('/trips'),
         apiClient.get('/tasks'),
-        apiClient.get('/people')
+        apiClient.get('/people'),
+        apiClient.get(`/transactions?from=${monthStart}&to=${monthEnd}`)
       ]);
 
-      const [debtsRes, subsRes, tripsRes, tasksRes, contactsRes] = results;
+      const [debtsRes, subsRes, tripsRes, tasksRes, contactsRes, transactionsRes] = results;
 
       const events = [];
 
@@ -534,7 +548,30 @@ export function useCalendarEvents() {
 
       // Sort chronological
       events.sort((a, b) => new Date(a.date) - new Date(b.date));
-      return events;
+
+      // Process Transactions
+      const spendMap = {};
+      const allTransactions = [];
+      if (transactionsRes.status === 'fulfilled') {
+        (transactionsRes.value || []).forEach(t => {
+          allTransactions.push(t);
+          if (t.occurred_at) {
+            const dateStr = t.occurred_at.split('T')[0];
+            if (!spendMap[dateStr]) {
+              spendMap[dateStr] = { total: 0, income: 0, expense: 0 };
+            }
+            if (t.type === 'income') {
+              spendMap[dateStr].income += t.amount;
+              spendMap[dateStr].total += t.amount;
+            } else {
+              spendMap[dateStr].expense += t.amount;
+              spendMap[dateStr].total -= t.amount;
+            }
+          }
+        });
+      }
+
+      return { events, spendMap, allTransactions };
     }
   });
 

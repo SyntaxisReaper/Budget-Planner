@@ -10,12 +10,24 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 export default function Calendar() {
-  const { query } = useCalendarEvents();
-  const events = query.data || [];
-  const navigate = useNavigate();
-
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const monthStart = startOfMonth(currentMonth).toISOString();
+  const monthEnd = endOfMonth(currentMonth).toISOString();
+
+  const { query } = useCalendarEvents(monthStart, monthEnd);
+  const events = query.data?.events || [];
+  const spendMap = query.data?.spendMap || {};
+  const allTransactions = query.data?.allTransactions || [];
+
+  const navigate = useNavigate();
+
+  const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+  const getTransactionLabel = (t) => {
+    return t.note || t.category_name || t.type;
+  };
 
   const getEventIcon = (type) => {
     if (type === 'task') return <CheckSquare size={16} />;
@@ -161,7 +173,7 @@ export default function Calendar() {
                     
                     {/* Event indicators (dots) */}
                     {dayEvents.length > 0 && (
-                      <div style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '2px' }}>
+                      <div style={{ position: 'absolute', bottom: '13px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '2px' }}>
                         {dayEvents.slice(0, 3).map((e, i) => (
                           <div 
                             key={i} 
@@ -169,6 +181,21 @@ export default function Calendar() {
                           />
                         ))}
                       </div>
+                    )}
+                    
+                    {/* Transaction spend dot */}
+                    {spendMap[dateStr] && spendMap[dateStr].total !== 0 && (
+                      <span className="transaction-dot" style={{
+                         position: 'absolute',
+                         bottom: '1px',
+                         fontSize: '9px',
+                         fontWeight: '600',
+                         letterSpacing: '-0.5px',
+                         color: spendMap[dateStr].expense > 0 && spendMap[dateStr].income === 0 ? 'var(--color-text-3)' : 
+                                spendMap[dateStr].income > 0 && spendMap[dateStr].expense === 0 ? '#4CAF50' : 'var(--color-text-3)'
+                      }}>
+                        {fmt.format(Math.abs(spendMap[dateStr].total))}
+                      </span>
                     )}
                   </div>
                 );
@@ -205,6 +232,42 @@ export default function Calendar() {
                 ))}
               </motion.div>
             )}
+            
+            {/* Day Transactions Section */}
+            <div className="mt-8">
+              <h3 className="font-bold text-sm text-muted uppercase tracking-wider mb-4 pl-1">Transactions</h3>
+              {(() => {
+                const dayTransactions = allTransactions.filter(t => isSameDay(new Date(t.occurred_at), selectedDate));
+                if (dayTransactions.length === 0) {
+                  return (
+                    <div className="empty-state text-center py-6 text-muted bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)]">
+                      <p className="text-sm">No transactions on this day.</p>
+                    </div>
+                  );
+                }
+                
+                const dayTotal = dayTransactions.reduce((acc, t) => t.type === 'income' ? acc + t.amount : acc - t.amount, 0);
+                
+                return (
+                  <div className="flex flex-col gap-2">
+                    {dayTransactions.map(t => (
+                      <div className="card p-3 flex items-center justify-between" key={t.id}>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-sm">{getTransactionLabel(t)}</span>
+                          <span className="text-xs text-muted capitalize">{t.category_name || t.type}</span>
+                        </div>
+                        <span className={`font-semibold ${t.type === 'income' ? 'text-green' : 'text-red'}`}>
+                          {t.type === 'income' ? '+' : '-'}{fmt.format(t.amount)}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="mt-2 text-right text-sm text-muted font-medium pr-1">
+                      Day total: <span className={dayTotal >= 0 ? 'text-green' : 'text-red'}>{dayTotal >= 0 ? '+' : '-'}{fmt.format(Math.abs(dayTotal))}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
 
         </div>
