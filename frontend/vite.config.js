@@ -31,18 +31,23 @@ export default defineConfig({
       workbox: {
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*\.onrender\.com\/api\/.*/i,
+            // Slow-changing data — cache for 5 minutes, show cached version offline
+            urlPattern: /^https:\/\/.*\.onrender\.com\/api\/(items|accounts|goals|settings|people|contacts|projects|trips|tasks|notes|subscriptions)/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'api-cache',
+              cacheName: 'api-slow-cache',
+              networkTimeoutSeconds: 5,
               expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 7 // 1 week
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24  // 1 day offline fallback
               },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
+              cacheableResponse: { statuses: [0, 200] }
             }
+          },
+          {
+            // Financial/time-sensitive data — network only, no offline stale data
+            urlPattern: /^https:\/\/.*\.onrender\.com\/api\/(transactions|dashboard|analytics|budget|debts|income)/i,
+            handler: 'NetworkOnly',  // If offline, this fails — OfflineBanner shows
           }
         ]
       }

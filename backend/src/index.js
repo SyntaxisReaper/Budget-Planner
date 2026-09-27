@@ -2,6 +2,8 @@ import 'express-async-errors';
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
 
 import incomeRoutes from './routes/income.js';
 import itemsRoutes from './routes/items.js';
@@ -49,6 +51,14 @@ app.use(cors({
   credentials: true 
 }));
 app.use(express.json());
+
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
+app.use(compression({
+  threshold: 1024,
+  level: 6,
+}));
 
 // Health check
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
