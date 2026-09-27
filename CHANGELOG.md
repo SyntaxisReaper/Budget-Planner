@@ -10,6 +10,15 @@
 - **Contacts Hub Enhancements:**
   - **Birthday & Anniversary tracking:** Added new date fields to the `people` table.
   - **Local Push Notifications:** Integrated `capacitor-local-notifications` to silently trigger an Android push notification for a contact's birthday/anniversary a day in advance at 10 AM, without requiring a backend cron job.
+- **Performance & Security Hardening:**
+  - Added `helmet` for robust API security headers.
+  - Added `compression` (gzip/brotli) to reduce API response sizes by up to 80%.
+  - Added `vercel.json` to enforce 1-year immutable caching on bundled JS/CSS assets, speeding up repeat visits dramatically.
+  - Split Workbox caching rules to ensure slow-changing data is cached offline, while time-sensitive financial data triggers the Offline Banner instead of showing stale balances.
+- **UI & Scanning Enhancements:**
+  - **Few-Shot Learning Receipt Scanner:** Upgraded the Gemini API prompt with real screenshot examples (PhonePe, Paytm, etc.) to drastically improve extraction accuracy for the UPI scanner.
+  - **Duplicate UTR Guard:** Added an immediate warning UI to the Transaction modal if a scanned receipt's UTR already exists in the database.
+  - Fixed a UI bug on the Transactions page where header buttons overflowed on small mobile screens.
 
 ## Version 5.1.x - Personal Assistant & Unified Architecture
 *Previous Version: v5.1.1*
