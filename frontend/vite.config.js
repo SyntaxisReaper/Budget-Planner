@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   plugins: [
     react(),
-    VitePWA({
+    process.env.TAURI_ENV_PLATFORM ? null : VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
@@ -47,7 +47,7 @@ export default defineConfig({
         ]
       }
     })
-  ],
+  ].filter(Boolean),
   server: {
     port: 5173,
   },

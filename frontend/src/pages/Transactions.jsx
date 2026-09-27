@@ -385,13 +385,17 @@ export default function Transactions() {
       const q = searchQuery.toLowerCase();
       const matchNote = t.note?.toLowerCase().includes(q);
       const matchUtr = t.utr_id?.toLowerCase().includes(q);
-      const targetName = (
-        (t.type === 'expense' && (t.items?.name || itemMap[t.item_id]?.name)) ||
-        (t.type === 'debt_payment' && (t.debts?.name || debtMap[t.debt_id]?.name)) ||
-        (t.type === 'goal_contribution' && (t.goals?.name || goalMap[t.goal_id]?.name)) ||
-        (t.type === 'expense' && !t.item_id && t.note?.startsWith('Auto-payment: ') ? t.note.replace('Auto-payment: ', 'Subscription: ') : '') ||
-        ''
-      ).toLowerCase();
+      let targetName = '';
+      if (t.type === 'expense' && (t.items?.name || itemMap[t.item_id]?.name)) {
+        targetName = t.items?.name || itemMap[t.item_id]?.name;
+      } else if (t.type === 'debt_payment' && (t.debts?.name || debtMap[t.debt_id]?.name)) {
+        targetName = t.debts?.name || debtMap[t.debt_id]?.name;
+      } else if (t.type === 'goal_contribution' && (t.goals?.name || goalMap[t.goal_id]?.name)) {
+        targetName = t.goals?.name || goalMap[t.goal_id]?.name;
+      } else if (t.type === 'expense' && !t.item_id && t.note?.startsWith('Auto-payment: ')) {
+        targetName = t.note.replace('Auto-payment: ', 'Subscription: ');
+      }
+      targetName = targetName.toLowerCase();
       if (!matchNote && !matchUtr && !targetName.includes(q)) return false;
     }
     return true;
