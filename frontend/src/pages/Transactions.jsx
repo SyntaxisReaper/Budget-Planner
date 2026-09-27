@@ -218,6 +218,17 @@ function AddTransactionModal({ items, accounts, debts, goals, wordFreq, onClose,
           </div>
         )}
 
+        {/* Duplicate UTR warning */}
+        {scanMeta?.existing_transaction && (
+          <div style={{
+            background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 'var(--radius)', padding: '8px 12px', marginBottom: 12,
+            fontSize: '0.8rem', color: '#ef4444',
+          }}>
+            ⛔ <strong>Duplicate Alert:</strong> A transaction with this UTR is already logged (₹{scanMeta.existing_transaction.amount} on {new Date(scanMeta.existing_transaction.occurred_at).toLocaleDateString('en-IN')}). Saving this will result in double-counting!
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="form-group">
             <label className="label">Account</label>

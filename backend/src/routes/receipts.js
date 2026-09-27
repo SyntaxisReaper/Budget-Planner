@@ -8,6 +8,7 @@
 
 import { Router } from 'express';
 import multer from 'multer';
+import { supabase } from '../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
 import { scanReceipt } from '../services/receiptScanner.js';
 
@@ -44,8 +45,23 @@ router.post('/scan', upload.single('receipt'), async (req, res) => {
     ? `Paid to ${result.recipient}`
     : undefined;
 
+  let existingTransaction = null;
+  if (result.utr_id) {
+    const { data } = await supabase
+      .from('transactions')
+      .select('id, amount, occurred_at')
+      .eq('user_id', req.userId)
+      .eq('utr_id', result.utr_id)
+      .maybeSingle();
+    
+    if (data) {
+      existingTransaction = data;
+    }
+  }
+
   res.json({
     amount:      result.amount,
+
     recipient:   result.recipient,
     utr_id:      result.utr_id,
     occurred_at: result.date,   // ISO 8601 string (IST offset), or null
@@ -55,6 +71,7 @@ router.post('/scan', upload.single('receipt'), async (req, res) => {
     note:        autoNote,
     // low_confidence flag — frontend shows a yellow warning banner
     low_confidence: (result.confidence ?? 1) < 0.7,
+    existing_transaction: existingTransaction,
   });
 });
 
