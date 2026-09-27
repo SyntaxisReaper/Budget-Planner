@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useContacts, useDebts } from '../hooks/useBudget.js';
 import { useTrips } from '../hooks/useTrips.js';
-import { Users, Plus, Phone, Mail, ChevronRight, User } from 'lucide-react';
+import { Users, Plus, Phone, Mail, ChevronRight, User, Trash } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { staggerContainer, itemVariants, backdropVariants, modalVariants } from '../lib/motion.js';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +9,7 @@ import { formatCurrency } from '../lib/utils.js';
 import ContactHistoryModal from '../components/ContactHistoryModal.jsx';
 import apiClient from '../lib/apiClient.js';
 import toast from 'react-hot-toast';
+import { useUndo } from '../hooks/useUndo.js';
 
 function ImportContactsButton({ onSuccess }) {
   const [importing, setImporting] = useState(false);
@@ -46,7 +47,7 @@ function ImportContactsButton({ onSuccess }) {
   );
 }
 
-function ContactModal({ contact, onClose, onSave, onViewHistory }) {
+function ContactModal({ contact, onClose, onSave, onViewHistory, onDelete }) {
   const [form, setForm] = useState({ 
     name: contact?.name || '', 
     email: contact?.email || '', 
@@ -106,11 +107,18 @@ function ContactModal({ contact, onClose, onSave, onViewHistory }) {
             </button>
           )}
 
-          <div className="modal-actions">
-            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? <span className="spinner"/> : 'Save'}
-            </button>
+          <div className="modal-actions mt-4 flex justify-between items-center w-full">
+            {contact ? (
+              <button type="button" className="btn btn-ghost text-error" onClick={onDelete}>
+                <Trash size={18} />
+              </button>
+            ) : <div />}
+            <div className="flex gap-2">
+              <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+              <button type="submit" className="btn btn-primary" disabled={loading}>
+                {loading ? <span className="spinner"/> : 'Save'}
+              </button>
+            </div>
           </div>
         </form>
       </motion.div>
@@ -126,6 +134,14 @@ export default function Contacts() {
   const [editingContact, setEditingContact] = useState(undefined);
   const [viewingHistoryFor, setViewingHistoryFor] = useState(null);
   const navigate = useNavigate();
+  const { executeUndoable } = useUndo();
+
+  async function handleDelete(id) {
+    executeUndoable(id, ['contacts', 'calendarEvents'], async (tid) => {
+      await remove.mutateAsync(tid);
+    }, 'Contact deleted');
+    setEditingContact(undefined);
+  }
   
   const contacts = query.data || [];
   const debts = debtsQuery.data || [];
@@ -200,6 +216,7 @@ export default function Contacts() {
             contact={editingContact} 
             onClose={() => setEditingContact(undefined)} 
             onSave={(data) => editingContact ? update.mutateAsync({ id: editingContact.id, ...data }) : create.mutateAsync(data)} 
+            onDelete={() => handleDelete(editingContact.id)}
             onViewHistory={(contact) => {
               setEditingContact(undefined);
               setViewingHistoryFor(contact);
